@@ -1,0 +1,14 @@
+Pillow
+XlsxWriter
+certifi
+numpy
+pandas
+pip
+python-dateutil
+pytz
+setuptools
+six
+torch
+torchvision
+typing-extensions
+wheel                        

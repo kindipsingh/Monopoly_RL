@@ -1,0 +1,12 @@
+certifi
+chardet
+docutils
+idna
+Kivy
+Kivy-Garden
+numpy
+Pygments
+requests
+six
+urllib3
+XlsxWriter
