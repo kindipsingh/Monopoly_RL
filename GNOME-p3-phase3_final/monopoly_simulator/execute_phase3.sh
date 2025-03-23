@@ -1,10 +1,10 @@
 # ---------------------------------------------------
 # user's parameters
 metaseed=15
-num_games=2
+num_games=3
 novelty_index=1 # the game index that reject novelty(0-indexed)
 #novelty_name="events_8"
-novelty_name="environments_9"
+novelty_name="environments_11"
 #novelty_name="goals_5"
 #user_agent='TA2-agent'
 user_agent='background-agent'

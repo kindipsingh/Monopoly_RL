@@ -4,6 +4,7 @@ from monopoly_simulator import action_choices
 import numpy as np
 from monopoly_simulator import card_utility_actions
 from monopoly_simulator import background_agent_v3_1
+from monopoly_simulator import ddqn_decision_agent
 from monopoly_simulator import background_agent_v1_2
 from monopoly_simulator import read_write_current_state
 import json

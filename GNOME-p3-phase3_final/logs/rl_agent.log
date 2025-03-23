@@ -1,0 +1,29 @@
+2025-03-22 12:52:22,736 - rl_agent_logs - INFO - Initializing DDQN Agent with state_dim=240, action_dim=2922
+2025-03-22 12:52:24,714 - rl_agent_logs - INFO - Using device: cpu
+2025-03-22 12:52:24,714 - rl_agent_logs - INFO - DDQN Agent initialization complete
+2025-03-22 12:52:25,226 - rl_agent_logs - DEBUG - Player player_3 making out-of-turn move
+2025-03-22 12:52:25,227 - rl_agent_logs - DEBUG - Making decision for player player_3 in phase out_of_turn
+2025-03-22 12:52:25,235 - rl_agent_logs - DEBUG - Random action selected: 0
+2025-03-22 12:52:25,236 - rl_agent_logs - INFO - Player player_3 skipping turn (out-of-turn)
+2025-03-22 12:52:25,383 - rl_agent_logs - DEBUG - Player player_3 making out-of-turn move
+2025-03-22 12:52:25,383 - rl_agent_logs - DEBUG - Making decision for player player_3 in phase out_of_turn
+2025-03-22 12:52:25,394 - rl_agent_logs - INFO - Reward calculation for player_3:
+2025-03-22 12:52:25,394 - rl_agent_logs - INFO -   Cash: $1500.0
+2025-03-22 12:52:25,395 - rl_agent_logs - INFO -   Assets: $0.0
+2025-03-22 12:52:25,396 - rl_agent_logs - INFO -   Net worth: $1500.0
+2025-03-22 12:52:25,397 - rl_agent_logs - INFO -   Final reward: 0.15
+2025-03-22 12:52:25,402 - rl_agent_logs - INFO - Reward: 0.1500, Replay Buffer Size: 1
+2025-03-22 12:52:25,404 - rl_agent_logs - DEBUG - State: [0.         0.73132205 0.         0.         0.        ]..., Action: 0, Next State: [0.         0.73132205 0.         0.         0.        ]..., Done: False
+2025-03-22 12:52:25,405 - rl_agent_logs - DEBUG - Random action selected: 0
+2025-03-22 12:52:25,405 - rl_agent_logs - INFO - Player player_3 skipping turn (out-of-turn)
+2025-03-22 12:52:25,540 - rl_agent_logs - DEBUG - Player player_3 making out-of-turn move
+2025-03-22 12:52:25,541 - rl_agent_logs - DEBUG - Making decision for player player_3 in phase out_of_turn
+2025-03-22 12:52:25,557 - rl_agent_logs - INFO - Reward calculation for player_3:
+2025-03-22 12:52:25,558 - rl_agent_logs - INFO -   Cash: $1500.0
+2025-03-22 12:52:25,559 - rl_agent_logs - INFO -   Assets: $0.0
+2025-03-22 12:52:25,559 - rl_agent_logs - INFO -   Net worth: $1500.0
+2025-03-22 12:52:25,559 - rl_agent_logs - INFO -   Final reward: 0.15
+2025-03-22 12:52:25,560 - rl_agent_logs - INFO - Reward: 0.1500, Replay Buffer Size: 2
+2025-03-22 12:52:25,561 - rl_agent_logs - DEBUG - State: [0.         0.73132205 0.         0.         0.        ]..., Action: 0, Next State: [0.         0.73132205 0.         0.         0.        ]..., Done: False
+2025-03-22 12:52:25,562 - rl_agent_logs - DEBUG - Random action selected: 0
+2025-03-22 12:52:25,562 - rl_agent_logs - INFO - Player player_3 skipping turn (out-of-turn)

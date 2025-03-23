@@ -7,6 +7,7 @@ from monopoly_simulator.logging_info import log_file_create
 from monopoly_simulator.novelty_generation_phase3 import *
 import monopoly_simulator.novelty_generation_phase3
 from monopoly_simulator.server_agent_serial import ServerAgent
+from monopoly_simulator import ddqn_decision_agent
 #from client_agent_serial import *
 import os
 import numpy as np
@@ -183,8 +184,8 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
 
 
 
-agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, background_agent_v4_1, background_agent_v4_1]]
-agent_combination_2 = [[background_agent_v3_1, background_agent_v3_1, background_agent_v4_1, background_agent_v4_1]]
+agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
+agent_combination_2 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 print('-------------------')
 print('---------')
 print("agent_combination_2 = ")
