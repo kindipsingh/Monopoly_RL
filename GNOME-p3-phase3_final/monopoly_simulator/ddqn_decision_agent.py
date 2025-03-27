@@ -12,29 +12,39 @@ from monopoly_simulator.ddqnn import DDQNNetwork
 from monopoly_simulator.training_ddqnn import DDQNAgent
 import logging
 
-# Set up the RL agent logger
+##############################################################
+# Logging configuration
+##############################################################
+# Use __file__ if available; otherwise default to current working directory
+current_file = globals().get('__file__', os.getcwd())
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(current_file)))
+log_dir = os.path.join(base_dir, 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'rl_agent.log')
+
+# Obtain the rl_agent_logs logger
 rl_logger = logging.getLogger('rl_agent_logs')
 rl_logger.setLevel(logging.DEBUG)
 
-# Create a file handler
-log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, 'rl_agent.log')
-file_handler = logging.FileHandler(log_file)
-file_handler.setLevel(logging.DEBUG)
-
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# Create a formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-# Add the handlers to the logger
-rl_logger.addHandler(file_handler)
-rl_logger.addHandler(console_handler)
+# Before adding new handlers, check if handlers already exist (to prevent duplicates)
+if not rl_logger.handlers:
+    # Create a file handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    
+    # Create a console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    
+    # Create a formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Add the handlers to the logger
+    rl_logger.addHandler(file_handler)
+    rl_logger.addHandler(console_handler)
+##############################################################
 
 # Keep the original logger for compatibility
 logger = logging.getLogger('monopoly_simulator.logging_info.ddqn_decision_agent')
@@ -254,147 +264,102 @@ class DDQNDecisionAgent(Agent):
         rl_logger.info(f"Player {player.player_name} taking {len(actions)} actions to handle negative cash balance")
         return actions
     
+    
     def _make_decision(self, player, current_gameboard, game_phase):
         """
-        Make a decision based on the current game state using the DDQN agent.
+        Make a decision based on the current game state using the DDQN agent,
+        implemented in a way similar to a background agent. This method uses the
+        action (a) chosen by the DDQN and maps it to an allowed game action based
+        on the current phase.
         
         Parameters:
-            player: The player object
-            current_gameboard: The current state of the game
-            game_phase: The current game phase (pre_roll, post_roll, out_of_turn)
-            
+            player: The player object.
+            current_gameboard: The current state of the game.
+            game_phase: The current game phase (pre_roll, post_roll, out_of_turn).
+        
         Returns:
-            The selected action
+            The selected game action.
         """
         try:
-            rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase}")
+            rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase} (background agent style)")
             
-            # Use the state encoder to encode the current game state
+            # Encode the current state and action mask
             state_vector = self.state_encoder.encode_state(current_gameboard)
-            
-            # Get the action mask from the action encoder
             _, action_mask = self.action_encoder.encode(player, current_gameboard, game_phase)
-            
-            # Convert to tensors
             state_tensor = state_vector.to(self.device)
             mask_tensor = torch.BoolTensor(action_mask).to(self.device)
             
-            # Store the current state if we have a previous state and action
-            if self.current_state is not None and self.last_action_idx is not None:
-                # Calculate reward
-                reward = self._calculate_reward(player, current_gameboard)
-                
-                # Check if the episode is done
-                done = self._is_episode_done(current_gameboard)
-                
-                # Add the transition to the replay buffer
-                self.ddqn_agent.replay_buffer.push(
-                    self.current_state,
-                    self.last_action_idx,
-                    reward,
-                    state_vector.squeeze().numpy(),
-                    done
-                )
-                
-                # Update replay buffer statistics
-                self.replay_buffer_size = len(self.ddqn_agent.replay_buffer.buffer)
-                self.total_rewards += reward
-                self.num_decisions += 1
-                
-                # Log the reward and replay buffer update
-                rl_logger.info(f"Reward: {reward:.4f}, Replay Buffer Size: {self.replay_buffer_size}")
-                rl_logger.debug(f"State: {self.current_state[:5]}..., Action: {self.last_action_idx}, Next State: {state_vector.squeeze().numpy()[:5]}..., Done: {done}")
-                
-                # Add to game history
-                self.game_history.append({
-                    'state': self.current_state,
-                    'action': self.last_action_idx,
-                    'reward': reward,
-                    'next_state': state_vector.squeeze().numpy(),
-                    'done': done
-                })
-                
-                # If episode is done, log episode statistics
-                if done:
-                    self.episode_rewards.append(self.total_rewards)
-                    rl_logger.info(f"Episode complete. Total rewards: {self.total_rewards:.4f}, Average reward: {self.total_rewards/max(1, self.num_decisions):.4f}")
-                    rl_logger.info(f"Replay buffer size: {self.replay_buffer_size}")
-                    # Reset episode statistics
-                    self.total_rewards = 0
-                    self.num_decisions = 0
+            # Use the DDQN agent's select_action to determine the "a" action.
+            ddqn_selected = self.ddqn_agent.select_action(state_tensor)
             
-            # Update current state
-            self.current_state = state_vector.squeeze().numpy()
-            self.last_state_vector = state_vector
-            self.last_action_mask = action_mask
-            
-            if self.training_mode:
-                # Select action using epsilon-greedy policy
-                if random.random() < self.ddqn_agent.epsilon:
-                    # Random action from valid actions
-                    valid_indices = np.where(action_mask)[0]
-                    action_idx = np.random.choice(valid_indices) if len(valid_indices) > 0 else 0
-                    rl_logger.debug(f"Random action selected: {action_idx}")
-                else:
-                    # Get Q-values from policy network
-                    with torch.no_grad():
-                        q_values = self.ddqn_agent.policy_net(state_tensor)
-                        
-                    # Mask invalid actions with large negative values
-                    masked_q_values = q_values.clone()
-                    masked_q_values[0, ~mask_tensor] = float('-inf')
-                    
-                    # Select action with highest Q-value
-                    action_idx = masked_q_values.argmax(dim=1).item()
-                    rl_logger.debug(f"Greedy action selected: {action_idx}, Q-value: {masked_q_values[0, action_idx].item():.4f}")
+            # If an integer is returned, we assume it is an action index.
+            if isinstance(ddqn_selected, int):
+                action_idx = ddqn_selected
             else:
-                # In evaluation mode, always select the best action
-                with torch.no_grad():
-                    q_values = self.ddqn_agent.policy_net(state_tensor)
-                    
-                    # Mask invalid actions
-                    masked_q_values = q_values.clone()
-                    masked_q_values[0, ~mask_tensor] = float('-inf')
-                    
-                    # Select action with highest Q-value
-                    action_idx = masked_q_values.argmax(dim=1).item()
-                    rl_logger.debug(f"Evaluation action selected: {action_idx}, Q-value: {masked_q_values[0, action_idx].item():.4f}")
+                # If a function name or callable is returned, use it directly.
+                action_idx = ddqn_selected
             
-            # Store the selected action
-            self.last_action_idx = action_idx
-            
-            # For now, return a simple action based on the game phase
-            # In a real implementation, you would decode the action index into a proper decision
-            if game_phase == "pre_roll":
-                if action_choices.use_get_out_of_jail_card in player.compute_allowable_pre_roll_actions(current_gameboard):
-                    rl_logger.info(f"Player {player.player_name} using get out of jail card")
-                    return action_choices.use_get_out_of_jail_card
-                elif action_choices.pay_jail_fine in player.compute_allowable_pre_roll_actions(current_gameboard):
-                    rl_logger.info(f"Player {player.player_name} paying jail fine")
-                    return action_choices.pay_jail_fine
-                rl_logger.info(f"Player {player.player_name} skipping turn (pre-roll)")
-                return action_choices.skip_turn
+            # Map the selected action based on the game phase.
+            if game_phase == "out_of_turn":
+                allowed = list(player.compute_allowable_out_of_turn_actions(current_gameboard))
+                if allowed:
+                    chosen_action = allowed[action_idx % len(allowed)] if isinstance(action_idx, int) else action_idx
+                else:
+                    rl_logger.warning(f"No allowed out-of-turn actions for {player.player_name}; defaulting to skip_turn")
+                    chosen_action = action_choices.skip_turn
+            elif game_phase == "pre_roll":
+                pre_roll_moves = player.compute_allowable_pre_roll_actions(current_gameboard)
+                # Prefer using get out of jail card or paying fine if available.
+                if action_choices.use_get_out_of_jail_card.__name__ in pre_roll_moves:
+                    chosen_action = action_choices.use_get_out_of_jail_card
+                elif action_choices.pay_jail_fine.__name__ in pre_roll_moves:
+                    chosen_action = action_choices.pay_jail_fine
+                else:
+                    rl_logger.info(f"Pre-roll move defaulting to skip_turn for {player.player_name}")
+                    chosen_action = action_choices.skip_turn
             elif game_phase == "post_roll":
-                if action_choices.buy_property in player.compute_allowable_post_roll_actions(current_gameboard):
-                    rl_logger.info(f"Player {player.player_name} buying property")
-                    return action_choices.buy_property
-                rl_logger.info(f"Player {player.player_name} concluding actions (post-roll)")
-                return action_choices.concluded_actions
-            else:  # out_of_turn
-                rl_logger.info(f"Player {player.player_name} skipping turn (out-of-turn)")
-                return action_choices.skip_turn
-                
+                post_roll_moves = player.compute_allowable_post_roll_actions(current_gameboard)
+                if action_choices.buy_property.__name__ in post_roll_moves:
+                    chosen_action = action_choices.buy_property
+                else:
+                    rl_logger.info(f"Post-roll move defaulting to concluded_actions for {player.player_name}")
+                    chosen_action = action_choices.concluded_actions
+            else:
+                rl_logger.warning(f"Unrecognized game phase {game_phase} for {player.player_name}; defaulting to skip_turn")
+                chosen_action = action_choices.skip_turn
+            
+            rl_logger.info(f"Decision for player {player.player_name} in phase {game_phase}: {chosen_action}")
+            
+            # If chosen_action is a string, map it to the actual function in action_choices.
+            if isinstance(chosen_action, str):
+                func = getattr(action_choices, chosen_action, None)
+                if func and callable(func):
+                    chosen_action = func
+                else:
+                    rl_logger.error(f"Allowed action name '{chosen_action}' could not be resolved to a callable function, defaulting to skip_turn")
+                    chosen_action = action_choices.skip_turn
+            
+            # Execute the selected action if callable; otherwise, return the action directly.
+            if callable(chosen_action):
+                return chosen_action()
+            else:
+                return chosen_action
+            
         except Exception as e:
             logger.error(f"Error in _make_decision: {str(e)}")
             rl_logger.error(f"Error in _make_decision: {str(e)}", exc_info=True)
-            # Fallback to a simple decision
+            # Fallback decision based on game phase.
             if game_phase == "pre_roll":
-                return action_choices.skip_turn
+                result = action_choices.skip_turn
             elif game_phase == "post_roll":
-                return action_choices.concluded_actions
-            else:  # out_of_turn
-                return action_choices.skip_turn
-    
+                result = action_choices.concluded_actions
+            else:
+                result = action_choices.skip_turn
+            if callable(result):
+                return result()
+            else:
+                return result
+
     def _calculate_reward(self, player, current_gameboard):
         """
         Calculate the reward for the current state.

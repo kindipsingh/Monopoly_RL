@@ -1277,109 +1277,94 @@ def post_roll_arbitrary_action(from_player=None, to_player=None, action_params_d
         raise Exception
 
 
+
 def make_arbitrary_interaction(from_player, to_player, interaction_params_dict, current_gameboard):
     """
     Two players can agree not to charge rent to one another on one of their assets.
-    Say Pacific Avenue is one property of player_2, and New York Avenue is one property owned by player_3,
-    if they made the agreement on these two properties, when player_3 lands on Pacific Avenue
-    or player_2 lands on New York Avenue, no rent fee will be charged.
-
-    Example interaction_params_dict = {'location': 'Pacific Avenue', 'to_location': New York Avenue}
-    from_player = Player_2, to_player = Player_3
-
-    The location is an asset owned by from_player (who sends the offer), and to_location is an asset owned by to_player
-    (who receives the offer).
-
-    The make_arbitrary_interaction could be called in out_of_turn move and we do not limit the position of offer sender 
-    and receiver when the trade happens (i.e., the sender do not need to at 'location' or 'to_location' to send offer,
-    and the receiver do not need to at 'location' or 'to_location' to receive offer.)
+    For example, if Player_2 owns Pacific Avenue and Player_3 owns New York Avenue, and
+    Player_2 offers free rent on Pacific Avenue to Player_3 (or vice versa), then when the
+    respective player lands on the corresponding street no rent fee will be charged.
     
-    After the receiver (Player_3 in the example) accepted the offer, each time Player_3 lands on 'Pacific Avenue' or
-    Player_2 lands on 'New York Avenue', the rent fee needed to pay will be 0.
-
-    If the receiver reject the offer, the rents don't change.
-    :param from_player: 
-    :param to_player: 
-    :param interaction_params_dict: 
-    :param current_gameboard: 
-    :return: 
-
-    # set default interaction id
-    if 'default_interaction_id' not in current_gameboard:
-        current_gameboard['default_interaction_id'] = 0
-
-    # avoid interacting player lost
-    if to_player.status == 'lost':
-        logger.debug("Free rent offer is being made to a player who has lost the game already! Returning failure code.")
-        return flag_config_dict['failure_code']
-    #logger.debug(f"{from_player.player_name} is trying to send offer to {to_player.player_name}.")
-    logger.debug(str(from_player.player_name) + ' is trying to send offer to ' + str(to_player.player_name) + '.')
+    Parameters:
+      - from_player: the player initiating the offer (must own the asset in interaction_params_dict['location'])
+      - to_player: the player receiving the offer (must own the asset in interaction_params_dict['to_location'])
+      - interaction_params_dict: a dictionary containing:
+            'location': the asset (instance of Location) owned by from_player,
+            'to_location': the asset (instance of Location) owned by to_player.
+      - current_gameboard: a dict representing the current state of the game.
     
-    # avoid conduct same interaction contract twice
-    if 'free_rent' in to_player.agent._agent_memory and 'free_rent' in from_player.agent._agent_memory:
-        for temp_id, item in from_player.agent._agent_memory['free_rent'].items():
-            if item['location'] == interaction_params_dict['location'] and \
-                    item['to_location'] == interaction_params_dict['to_location'] and \
-                    item['to_player'] == to_player:
-                logger.debug('A same contract exists between ' + str(from_player.player_name) + ' and ' +  str(to_player.player_name))
-                return flag_config_dict['failure_code']
-            
-    # avoid the sender and receiver are the same player
-    if from_player == to_player:
-        logger.debug(str(from_player.player_name) +  ' cannot make interaction offer to itself')
-        return flag_config_dict['failure_code']
-    
-    # avoid using other player's or bank's property to make interaction
-    if interaction_params_dict['to_location'].owned_by != to_player or \
-            interaction_params_dict['location'].owned_by != from_player:
-        logger.debug(
-            str(from_player.player_name) + ' did not own ' + str(interaction_params_dict['location'].name) +  'to make offer, or'  
-            'interaction offer send to wrong player who did not own' + str(interaction_params_dict['to_location'].name))
-        return flag_config_dict['failure_code']
-
-    logger.debug(
-        str(from_player.player_name) + ' asks for free rent to ' + str(to_player.player_name) + ' on property ' + str(interaction_params_dict['to_location'].name) + '.'
-        'If ' + str(to_player.player_name) + ' accepts, ' + str(to_player.player_name) + " will also do not need to pay rent on" + str(from_player.player_name) +  "'s property " + str(interaction_params_dict['location'].name) + '.')
-    
-    if 'free_rent_interaction' in current_gameboard:  # interaction schema
-        if 'free_rent' not in from_player.agent._agent_memory:
-            from_player.agent._agent_memory['free_rent'] = dict()
-        if 'free_rent' not in to_player.agent._agent_memory:
-            to_player.agent._agent_memory['free_rent'] = dict()
-
-        # only real_estate could be used in free-rent action
-        if interaction_params_dict['location'].loc_class == 'real_estate':
-            # from_player has two location info and who is the receiver
-            interaction_id = current_gameboard['default_interaction_id']
-
-            from_player.agent._agent_memory['free_rent'][interaction_id] = dict()
-            from_player.agent._agent_memory['free_rent'][interaction_id]['location'] = interaction_params_dict[
-                'location']
-            from_player.agent._agent_memory['free_rent'][interaction_id]['to_location'] = interaction_params_dict[
-                'to_location']
-            from_player.agent._agent_memory['free_rent'][interaction_id]['to_player'] = to_player
-
-            interaction_params_dict['from_player'] = from_player
-            to_player.interaction_dict[interaction_id] = interaction_params_dict
-
-            # increase interaction id for next potential interaction id created by agent
-            current_gameboard['default_interaction_id'] += 1
-            logger.debug(str(from_player.player_name) + ' send request to ' + str(to_player.player_name) +' for freeing rent.')
-
-        else:
-            logger.debug('Cannot free rent on this location since its not real_estate.')
-            return flag_config_dict['failure_code']
-
-        return flag_config_dict['successful_action']
-    else:
-        logger.debug('something wrong with novelty injection...')
-        raise Exception
+    Returns:
+      flag_config_dict['successful_action'] if the free rent offer is recorded successfully,
+      flag_config_dict['failure_code'] otherwise.
     """
-    if interaction_params_dict:
+    # Ensure both players are defined and are not the same
+    if from_player == to_player:
+        logger.debug(f"{from_player.player_name} cannot make an interaction offer to itself.")
         return flag_config_dict['failure_code']
-    else:
-        return flag_config_dict['successful_action']
-
+    
+    # Ensure the receiver (to_player) is still active
+    if to_player.status == 'lost':
+        logger.debug(f"Free rent offer is being made to {to_player.player_name}, who has already lost. Returning failure code.")
+        return flag_config_dict['failure_code']
+    
+    # Validate that interaction_params_dict contains required keys and proper Location instances
+    required_keys = ['location', 'to_location']
+    for key in required_keys:
+        if key not in interaction_params_dict:
+            logger.debug(f"Interaction parameter '{key}' is missing. Returning failure code.")
+            return flag_config_dict['failure_code']
+        # Check that the values are instances of Location
+        if not isinstance(interaction_params_dict[key], Location):
+            logger.debug(f"The parameter '{key}' does not contain a valid Location instance. Returning failure code.")
+            return flag_config_dict['failure_code']
+    
+    # Verify property ownership: 'location' should be owned by from_player and 'to_location' should be owned by to_player
+    if interaction_params_dict['location'].owned_by != from_player:
+        logger.debug(f"{from_player.player_name} does not own {interaction_params_dict['location'].name}. Returning failure code.")
+        return flag_config_dict['failure_code']
+    if interaction_params_dict['to_location'].owned_by != to_player:
+        logger.debug(f"{to_player.player_name} does not own {interaction_params_dict['to_location'].name}. Returning failure code.")
+        return flag_config_dict['failure_code']
+    
+    # Avoid duplicate interaction contracts between the two players
+    # We assume that both players' agents store free rent offers under 'free_rent' in their agent memory.
+    from_memory = from_player.agent._agent_memory.get('free_rent', {})
+    for temp_id, item in from_memory.items():
+        if (item.get('location') == interaction_params_dict['location'] and 
+            item.get('to_location') == interaction_params_dict['to_location'] and
+            item.get('to_player') == to_player):
+            logger.debug(f"A free rent contract already exists between {from_player.player_name} and {to_player.player_name}. Returning failure code.")
+            return flag_config_dict['failure_code']
+    
+    # Ensure that the agent memories are initialized for free_rent offers
+    if 'free_rent' not in from_player.agent._agent_memory:
+        from_player.agent._agent_memory['free_rent'] = {}
+    if 'free_rent' not in to_player.agent._agent_memory:
+        to_player.agent._agent_memory['free_rent'] = {}
+    if not hasattr(to_player, "interaction_dict"):
+        to_player.interaction_dict = {}
+    
+    # Assign a new unique interaction ID from the gameboard and update the counter
+    interaction_id = current_gameboard.get('default_interaction_id', 0)
+    current_gameboard['default_interaction_id'] = interaction_id + 1
+    
+    # Save the contract in from_player's memory
+    from_player.agent._agent_memory['free_rent'][interaction_id] = {
+        'location': interaction_params_dict['location'],
+        'to_location': interaction_params_dict['to_location'],
+        'to_player': to_player
+    }
+    
+    # Also save the contract in to_player's interaction dictionary so that the receiver can view and later accept/reject it
+    interaction_offer = {
+        'from_player': from_player,
+        'location': interaction_params_dict['location'],
+        'to_location': interaction_params_dict['to_location']
+    }
+    to_player.interaction_dict[interaction_id] = interaction_offer
+    
+    logger.debug(f"{from_player.player_name} has successfully sent a free rent offer to {to_player.player_name} with interaction ID {interaction_id}.")
+    return flag_config_dict['successful_action']
 
 def accept_arbitrary_interaction(from_player, to_player, interaction_id, decision, current_gameboard):
     """
