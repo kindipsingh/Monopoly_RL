@@ -1,47 +1,52 @@
 # other_actions_mapping.py
-# This file creates a flat mapping list for actions that have a dimension of 1 and take no parameters.
-# The actions include: skip_turn, conclude_actions, use_get_out_of_jail_card, pay_jail_fine, and accept_trade_offer.
+# This file creates a flat mapping list for actions with their required parameters.
+# The actions include: pay_jail_fine, use_get_out_of_jail_card, accept_trade_offer, skip_turn, concluded_actions.
+# Each entry in the returned list is a dictionary with the structure:
+#    {
+#      "action": <action_name>,
+#      "parameters": { expected parameters }
+#    }
+# Total number of entries: 5.
 
-def build_other_actions_mapping():
+def build_other_actions_mapping(player, current_gameboard):
     """
-    Build a flat mapping list for actions with no parameters.
+    Build a flat mapping list for actions with their required parameters.
     
-    The actions included are:
-      - "skip_turn"
-      - "conclude_actions"
-      - "use_get_out_of_jail_card"
-      - "pay_jail_fine"
-      - "accept_trade_offer"
+    The actions and their runtime parameters:
+      - "pay_jail_fine": {"player": acting player, "current_gameboard": current game board}
+      - "use_get_out_of_jail_card": {"player": acting player, "current_gameboard": current game board}
+      - "accept_trade_offer": {"player": acting player, "current_gameboard": current game board}
+      - "skip_turn": {}
+      - "concluded_actions": {}
       
-    Each entry in the returned list is a dictionary with the structure:
-       {
-         "action": <action_name>,
-         "parameters": {}
-       }
-    Total number of entries: 5.
-    
+    Args:
+      player: The acting player instance.
+      current_gameboard: The current game board dict.
+      
     Returns:
          A list of 5 mapping dictionaries.
     """
     actions = [
-        "skip_turn",
-        "conclude_actions",
-        "use_get_out_of_jail_card",
-        "pay_jail_fine",
-        "accept_trade_offer"
+        {
+            "action": "pay_jail_fine",
+            "parameters": {"player": player, "current_gameboard": current_gameboard}
+        },
+        {
+            "action": "use_get_out_of_jail_card",
+            "parameters": {"player": player, "current_gameboard": current_gameboard}
+        },
+        {
+            "action": "accept_trade_offer",
+            "parameters": {"player": player, "current_gameboard": current_gameboard}
+        },
+        {
+            "action": "skip_turn",
+            "parameters": {}
+        },
+        {
+            "action": "concluded_actions",
+            "parameters": {}
+        }
     ]
     
-    mapping_list = [{
-        "action": action,
-        "parameters": {}
-    } for action in actions]
-    
-    return mapping_list
-
-# Example usage:
-if __name__ == "__main__":
-    mapping_list = build_other_actions_mapping()
-    print("Total number of entries:", len(mapping_list))
-    print("Mapping entries:")
-    for entry in mapping_list:
-        print(entry)
+    return actions

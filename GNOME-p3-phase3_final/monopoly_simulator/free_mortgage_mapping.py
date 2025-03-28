@@ -51,7 +51,7 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
 
     return property_list
 
-def build_free_mortgage_list(schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_free_mortgage_list(player,current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
     """
     Build a flat list for the "free_mortgage" action.
 
@@ -73,7 +73,9 @@ def build_free_mortgage_list(schema_filepath="monopoly_game_schema_v1-2.json"):
         mapping_entry = {
             "action": "free_mortgage",
             "parameters": {
-                "property": prop["name"]
+                "player":player,
+                "asset": prop["name"],
+                "current_gameboard": current_gameboard
             }
         }
         flat_mapping.append(mapping_entry)
@@ -82,11 +84,3 @@ def build_free_mortgage_list(schema_filepath="monopoly_game_schema_v1-2.json"):
         raise ValueError(f"Expected 28 entries but got {len(flat_mapping)}")
 
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    mapping_list = build_free_mortgage_list()
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries:")
-    for entry in mapping_list[:5]:
-        print(entry)

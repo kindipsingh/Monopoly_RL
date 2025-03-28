@@ -20,7 +20,7 @@ class DDQNNetwork(nn.Module):
       - Experience Replay Buffer Size: 10^4 entries
       - Target Network Update: Every 500 episodes, update target network parameters to match policy network
     """
-    def __init__(self, state_dim=240, action_dim=2922):
+    def __init__(self, state_dim=240, action_dim=2950):
         super(DDQNNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, 1024)
         self.fc2 = nn.Linear(1024, 512)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # Testing the DDQN network with a dummy input
     batch_size = 2
     state_dim = 240
-    action_dim = 2922
+    action_dim = 2950
 
     dummy_state = torch.randn(batch_size, state_dim)
     model = DDQNNetwork(state_dim=state_dim, action_dim=action_dim)

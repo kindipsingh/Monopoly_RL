@@ -1,3 +1,4 @@
+
 import sys
 import os
 
@@ -15,13 +16,9 @@ from monopoly_simulator.player import Player
 
 # For buy_property mapping, we create a simple dummy mapping (1 entry) 
 def build_buy_property_list():
-    return [{"action": "buy_property", "parameters": {}}]
+    return [{"action": "buy_property", "parameters": {"player": None, "current_gameboard": None}}]
 
-# For buy_property mapping, we create a simple dummy mapping (1 entry) 
-def build_buy_property_list():
-    return [{"action": "buy_property", "parameters": {}}]
-
-def build_full_action_mapping(acting_player, schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_full_action_mapping(acting_player, current_gameboard, schema_filepath="monopoly_game_schema_v1-2.json"):
     """
     Build the full flat mapping list for all actions by concatenating the individual mappings.
     
@@ -34,9 +31,18 @@ def build_full_action_mapping(acting_player, schema_filepath="monopoly_game_sche
       6. sell_property              (28 entries)
       7. mortgage_property          (28 entries)
       8. free_mortgage              (28 entries)
-      9. other actions (skip_turn, conclude_actions, use_get_out_of_jail_card, pay_jail_fine, accept_trade_offer)
-         (5 entries)
+      9. other actions (5 entries):
+             - pay_jail_fine          : {"player": acting_player, "current_gameboard": current_gameboard}
+             - use_get_out_of_jail_card : {"player": acting_player, "current_gameboard": current_gameboard}
+             - accept_trade_offer       : {"player": acting_player, "current_gameboard": current_gameboard}
+             - skip_turn                : {}
+             - concluded_actions        : {}
      10. buy_property              (1 entry)
+     
+    Args:
+      acting_player: The acting player instance.
+      current_gameboard: The current game board dict.
+      schema_filepath: Path to the game schema file.
      
     Returns:
         The combined flat mapping list.
@@ -49,31 +55,29 @@ def build_full_action_mapping(acting_player, schema_filepath="monopoly_game_sche
     full_mapping.extend(build_sell_house_hotel_list(schema_filepath))
     full_mapping.extend(build_sell_property_list(schema_filepath))
     full_mapping.extend(build_mortgage_property_list(schema_filepath))
-    full_mapping.extend(build_free_mortgage_list(schema_filepath))
-    full_mapping.extend(build_other_actions_mapping())
+    full_mapping.extend(build_free_mortgage_list(acting_player,current_gameboard,schema_filepath))
+    # Pass acting_player and current_gameboard to other actions mapping.
+    full_mapping.extend(build_other_actions_mapping(acting_player, current_gameboard))
     full_mapping.extend(build_buy_property_list())
     return full_mapping
 
 if __name__ == "__main__":
-    # Create an acting player using the Player class from our codebase.
-    # Provide minimal default values for demonstration.
-    acting_player = Player(
-        current_position=0,
-        status="waiting_for_move",
-        has_get_out_of_jail_community_chest_card=False,
-        has_get_out_of_jail_chance_card=False,
-        current_cash=1500,
-        num_railroads_possessed=0,
-        player_name="player_1",
-        assets=set(),
-        full_color_sets_possessed=set(),
-        currently_in_jail=False,
-        num_utilities_possessed=0,
-        agent=None  # Replace with an actual agent if needed.
-    )
-    
-    full_mapping = build_full_action_mapping(acting_player)
-    print("Total number of mapping entries:", len(full_mapping))
-    print("First 5 mapping entries:")
-    for entry in full_mapping[:5]:
-        print(entry)
+    # Create a dummy acting player.
+    # The Player class is expected to have a player_name formatted as "player_N"
+    try:
+        acting_player = Player("player_1")
+    except Exception as e:
+        sys.exit(f"Error creating acting player: {e}")
+
+    # Create a dummy game board. This can be replaced with a proper game board dictionary structure.
+    current_gameboard = {}
+
+    # Build the full action mapping.
+    try:
+        mapping = build_full_action_mapping(acting_player, current_gameboard)
+    except Exception as ex:
+        sys.exit(f"Error building action mapping: {ex}")
+
+    # Print the total number of mapping entries.
+    total_entries = len(mapping)
+    print(f"Total action mapping length: {total_entries}")

@@ -55,8 +55,8 @@ def build_make_trade_offer_sell_list(acting_player, schema_filepath="monopoly_ga
 
     This action is represented with a 252-dimensional space based on:
       - To player: 3 possible choices (the three other players chosen cyclically).
-      - Property offered: 28 options (from the property list read from the schema).
-      - Cash requested: 3 discretized values corresponding to:
+      - Asset offered: 28 options (from the property list read from the schema).
+      - Price category: 3 discretized values corresponding to:
            "below_market" (0.75 x purchase price), "at_market" (1 x purchase price), and 
            "above_market" (1.25 x purchase price).
 
@@ -65,14 +65,16 @@ def build_make_trade_offer_sell_list(acting_player, schema_filepath="monopoly_ga
     
     Returns:
         A list of 252 dictionaries. Each dictionary has:
-            - "action": "make_trade_offer_sell"
+            - "action": "make_sell_property_offer"
             - "parameters": a flat dictionary with keys:
-                "to_player": target player's name
-                "property_offered": offered property name
-                "cash_requested": one of ["below_market", "at_market", "above_market"]
+                "to_player": target player's name,
+                "asset": offered property name,
+                "price": one of ["below_market", "at_market", "above_market"]
                 
     Total combinations: 3 x 28 x 3 = 252.
     """
+    from monopoly_simulator.player import Player
+
     if not isinstance(acting_player, Player):
         raise TypeError("acting_player must be an instance of Player from the code base.")
     
@@ -88,18 +90,18 @@ def build_make_trade_offer_sell_list(acting_player, schema_filepath="monopoly_ga
     
     properties = load_property_objects_from_schema(schema_filepath)
     
-    cash_categories = ["below_market", "at_market", "above_market"]
+    price_categories = ["below_market", "at_market", "above_market"]
     
     flat_mapping = []
     for target in allowed_targets:
         for offered_property in properties:
-            for cash in cash_categories:
+            for price in price_categories:
                 mapping_entry = {
-                    "action": "make_trade_offer_sell",
+                    "action": "make_sell_property_offer",
                     "parameters": {
                         "to_player": target,
-                        "property_offered": offered_property["name"],
-                        "cash_requested": cash
+                        "asset": offered_property["name"],
+                        "price": price
                     }
                 }
                 flat_mapping.append(mapping_entry)
@@ -108,23 +110,3 @@ def build_make_trade_offer_sell_list(acting_player, schema_filepath="monopoly_ga
         raise ValueError(f"Expected 252 entries but got {len(flat_mapping)}")
     
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    # Creating a dummy subclass of Player for demonstration.
-    class DummyPlayer(Player):
-        def __init__(self, name):
-            super().__init__(current_position=0, status="active", has_get_out_of_jail_community_chest_card=False,
-                             has_get_out_of_jail_chance_card=False, current_cash=1500, num_railroads_possessed=0,
-                             player_name=name, assets=set(), full_color_sets_possessed=set(), currently_in_jail=False,
-                             num_utilities_possessed=0, agent=None)
-    
-    acting_player = DummyPlayer("player_1")
-    mapping_list = build_make_trade_offer_sell_list(acting_player)
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries:")
-    for entry in mapping_list[:5]:
-        print(entry)
-    
-    # Uncomment the next line to use the mapping list in your application:
-    # mapping_list

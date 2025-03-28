@@ -83,7 +83,7 @@ def build_improve_property_list(schema_filepath="monopoly_game_schema_v1-2.json"
             mapping_entry = {
                 "action": "improve_property",
                 "parameters": {
-                    "property": prop["name"],
+                    "asset": prop["name"],
                     "flag": flag
                 }
             }

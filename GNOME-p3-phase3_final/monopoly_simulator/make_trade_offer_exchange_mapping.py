@@ -54,9 +54,10 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
     
     return property_list
 
-def build_make_trade_offer_exchange_list(acting_player, schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_make_trade_offer_exchange_list(acting_player, current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
     """
-    Build a flat list for the "make_trade_offer_exchange" action.
+    Build a flat list for the "make_trade_offer_exchange" action with parameters structured
+    to be consistent with the make_trade_offer API.
 
     Reads the list of property objects from the provided JSON schema file.
 
@@ -66,11 +67,18 @@ def build_make_trade_offer_exchange_list(acting_player, schema_filepath="monopol
     
     Returns:
         A list of 2268 dictionaries. Each dictionary represents one allowed combination with:
-            - "action": The string "make_trade_offer_exchange"
+            - "action": The string "make_trade_offer"
             - "parameters": A flat dictionary containing:
-                   {"to_player": <target_player>, "property_offered": <offered_property_name>,
-                    "property_requested": <requested_property_name>}
-    
+                   {
+                       "offer": {
+                           "property_set_offered": {<offered_property_name>},
+                           "property_set_wanted": {<requested_property_name>},
+                           "cash_offered": 0,
+                           "cash_wanted": 0
+                       },
+                       "to_player": <target_player>
+                   }
+                   
     The allowed target players for an acting player "player_N" are:
          "player_{((N-1+1)%4)+1}", "player_{((N-1+2)%4)+1}", "player_{((N-1+3)%4)+1}"
          
@@ -102,11 +110,17 @@ def build_make_trade_offer_exchange_list(acting_player, schema_filepath="monopol
         for offered_property in properties:
             for requested_property in (p for p in properties if p["name"] != offered_property["name"]):
                 mapping_entry = {
-                    "action": "make_trade_offer_exchange",
+                    "action": "make_trade_offer",
                     "parameters": {
+                        "from_player":acting_player,
+                        "offer": {
+                            "property_set_offered": {offered_property["name"]},
+                            "property_set_wanted": {requested_property["name"]},
+                            "cash_offered": 0,
+                            "cash_wanted": 0
+                        },
                         "to_player": target,
-                        "property_offered": offered_property["name"],
-                        "property_requested": requested_property["name"]
+                        "current_gameboard":current_gameboard
                     }
                 }
                 flat_mapping.append(mapping_entry)
@@ -115,25 +129,3 @@ def build_make_trade_offer_exchange_list(acting_player, schema_filepath="monopol
         raise ValueError(f"Expected 2268 entries but got {len(flat_mapping)}")
     
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    # For demonstration, we create a dummy subclass of Player that requires only player_name.
-    # In the real codebase, Player is fully implemented in monopoly_simulator/player.py.
-    class DummyPlayer(Player):
-        def __init__(self, name):
-            # Call the original initializer with dummy values for parameters not needed here.
-            # These dummy values are only used to allow accessing the player_name property.
-            # Adjust as appropriate for your testing environment.
-            super().__init__(current_position=0, status="active", has_get_out_of_jail_community_chest_card=False,
-                             has_get_out_of_jail_chance_card=False, current_cash=1500, num_railroads_possessed=0,
-                             player_name=name, assets=set(), full_color_sets_possessed=set(), currently_in_jail=False,
-                             num_utilities_possessed=0, agent=None)
-    
-    acting_player = DummyPlayer("player_1")
-    mapping_list = build_make_trade_offer_exchange_list(acting_player)
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries)")
-    print(len(mapping_list))
-    for entry in mapping_list[:5]:
-        print(entry)

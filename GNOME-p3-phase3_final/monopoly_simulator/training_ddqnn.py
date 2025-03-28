@@ -37,7 +37,7 @@ class ReplayBuffer:
 # DDQN Agent Implementation
 # -----------------------------
 class DDQNAgent:
-    def __init__(self, state_dim=240, action_dim=2922, 
+    def __init__(self, state_dim=240, action_dim=2950,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
                  replay_capacity=10000, target_update_freq=500):
         self.state_dim = state_dim
@@ -63,22 +63,43 @@ class DDQNAgent:
         
         self.steps_done = 0
     
+    # def select_action(self, state):
+    #     """
+    #     Select an action using epsilon-greedy.
+    #     Assumes state is a torch.Tensor of shape (1, state_dim).
+    #     In this example, we choose the action index with max Q-value.
+    #     In practice, you might use action masking using your ActionEncoder.
+    #     """
+    #     self.steps_done += 1
+    #     if random.random() < self.epsilon:
+    #         # Random action (note: in a real simulator, select only from valid actions)
+    #         return random.randrange(self.action_dim)
+    #     else:
+    #         with torch.no_grad():
+    #             q_values = self.policy_net(state.to(self.device))
+    #             # Use torch.argmax for index (action) selection.
+    #             return q_values.argmax(dim=1).item()
     def select_action(self, state):
         """
-        Select an action using epsilon-greedy.
+        Select an action using epsilon-greedy, restricted to action indices between 2268 and 2922.
         Assumes state is a torch.Tensor of shape (1, state_dim).
-        In this example, we choose the action index with max Q-value.
-        In practice, you might use action masking using your ActionEncoder.
         """
         self.steps_done += 1
+        lower_bound = 2268
+        upper_bound = 2922  # upper_bound is exclusive in random.randrange
+        
         if random.random() < self.epsilon:
-            # Random action (note: in a real simulator, select only from valid actions)
-            return random.randrange(self.action_dim)
+            # Random action selected from the restricted range.
+            return random.randrange(lower_bound, upper_bound)
         else:
             with torch.no_grad():
                 q_values = self.policy_net(state.to(self.device))
-                # Use torch.argmax for index (action) selection.
-                return q_values.argmax(dim=1).item()
+                # Restrict Q-values to the desired range.
+                restricted_q = q_values[:, lower_bound:upper_bound]
+                # Get index of max value relative to the restricted slice.
+                relative_index = restricted_q.argmax(dim=1).item()
+                # Map the relative index to the absolute index.
+                return lower_bound + relative_index
 
     def optimize_model(self):
         if len(self.replay_buffer) < self.batch_size:

@@ -51,7 +51,7 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
     
     return property_list
 
-def build_make_trade_offer_buy_list(acting_player, schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_make_trade_offer_buy_list(acting_player,current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
     """
     Build a flat list for the "make_trade_offer_buy" action.
 
@@ -65,14 +65,20 @@ def build_make_trade_offer_buy_list(acting_player, schema_filepath="monopoly_gam
     
     Returns:
         A list of 252 dictionaries. Each dictionary has:
-            - "action": "make_trade_offer_buy"
+            - "action": "make_trade_offer"
             - "parameters": a flat dictionary with keys:
-                  "to_player": target player's name,
-                  "property_requested": requested property name,
-                  "cash_offered": one of ["below_market", "at_market", "above_market"]
-    
+                  "offer": {
+                      "property_set_offered": set(),
+                      "property_set_wanted": {<requested property name>},
+                      "cash_offered": one of ["below_market", "at_market", "above_market"],
+                      "cash_wanted": 0
+                  },
+                  "to_player": target player's name
+
     Total combinations: 3 x 28 x 3 = 252.
     """
+    from monopoly_simulator.player import Player
+    
     if not isinstance(acting_player, Player):
         raise TypeError("acting_player must be an instance of Player from the code base.")
     
@@ -95,11 +101,17 @@ def build_make_trade_offer_buy_list(acting_player, schema_filepath="monopoly_gam
         for property_obj in properties:
             for cash in cash_categories:
                 mapping_entry = {
-                    "action": "make_trade_offer_buy",
+                    "action": "make_trade_offer",
                     "parameters": {
+                        "from_player":acting_player,
+                        "offer": {
+                            "property_set_offered": set(),
+                            "property_set_wanted": { property_obj["name"] },
+                            "cash_offered": cash,
+                            "cash_wanted": 0
+                        },
                         "to_player": target,
-                        "property_requested": property_obj["name"],
-                        "cash_offered": cash
+                        "current_gameboard":current_gameboard
                     }
                 }
                 flat_mapping.append(mapping_entry)
@@ -108,20 +120,3 @@ def build_make_trade_offer_buy_list(acting_player, schema_filepath="monopoly_gam
         raise ValueError(f"Expected 252 entries but got {len(flat_mapping)}")
     
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    # Dummy Player subclass for demonstration.
-    class DummyPlayer(Player):
-        def __init__(self, name):
-            super().__init__(current_position=0, status="active", has_get_out_of_jail_community_chest_card=False,
-                             has_get_out_of_jail_chance_card=False, current_cash=1500, num_railroads_possessed=0,
-                             player_name=name, assets=set(), full_color_sets_possessed=set(), currently_in_jail=False,
-                             num_utilities_possessed=0, agent=None)
-    
-    acting_player = DummyPlayer("player_1")
-    mapping_list = build_make_trade_offer_buy_list(acting_player)
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries:")
-    for entry in mapping_list[:5]:
-        print(entry)

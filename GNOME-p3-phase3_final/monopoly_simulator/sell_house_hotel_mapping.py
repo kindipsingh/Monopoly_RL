@@ -50,21 +50,24 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
     
     return property_list
 
-def build_sell_house_hotel_list(schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_sell_house_hotel_list(player,current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
     """
     Build a flat list for the "sell_house_hotel" action.
 
     For this action, we want a 44-dimensional space based on 22 viable "real_estate" properties
-    and two options for the flag (i.e. "house" or "hotel").
+    and two options for the sale:
+      - Selling a house (sell_house=True, sell_hotel=False)
+      - Selling a hotel (sell_house=False, sell_hotel=True)
 
     Returns:
         A list of 44 dictionaries. Each dictionary has:
             - "action": "sell_house_hotel"
             - "parameters": a flat dictionary with keys:
-                  "property": name of the real estate property,
-                  "flag": either "house" or "hotel"
+                  "asset": name of the real estate property,
+                  "sell_house": boolean indicating if selling a house,
+                  "sell_hotel": boolean indicating if selling a hotel
                   
-    Total combinations: 22 (properties) x 2 (flags) = 44.
+    Total combinations: 22 (properties) x 2 (sale options) = 44.
     """
     properties = load_property_objects_from_schema(schema_filepath)
     # Filter only "real_estate" properties.
@@ -73,29 +76,34 @@ def build_sell_house_hotel_list(schema_filepath="monopoly_game_schema_v1-2.json"
     if len(real_estate_properties) != 22:
         raise ValueError(f"Expected 22 real estate properties, but got {len(real_estate_properties)}")
     
-    flags = ["house", "hotel"]
-    
     flat_mapping = []
     for prop in real_estate_properties:
-        for flag in flags:
-            mapping_entry = {
-                "action": "sell_house_hotel",
-                "parameters": {
-                    "property": prop["name"],
-                    "flag": flag
-                }
+        # Mapping entry for selling a house.
+        mapping_house = {
+            "action": "sell_house_hotel",
+            "parameters": {
+                "player":player,
+                "asset": prop["name"],
+                "current_gameboard":current_gameboard,
+                "sell_house": True,
+                "sell_hotel": False
             }
-            flat_mapping.append(mapping_entry)
+        }
+        # Mapping entry for selling a hotel.
+        mapping_hotel = {
+            "action": "sell_house_hotel",
+            "parameters": {
+                "player":player,
+                "asset": prop["name"],
+                "current_gameboard":current_gameboard,
+                "sell_house": False,
+                "sell_hotel": True
+            }
+        }
+        flat_mapping.append(mapping_house)
+        flat_mapping.append(mapping_hotel)
     
     if len(flat_mapping) != 44:
         raise ValueError(f"Expected 44 entries but got {len(flat_mapping)}")
     
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    mapping_list = build_sell_house_hotel_list()
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries:")
-    for entry in mapping_list[:5]:
-        print(entry)

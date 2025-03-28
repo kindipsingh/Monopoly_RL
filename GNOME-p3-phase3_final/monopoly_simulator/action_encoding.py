@@ -3,11 +3,11 @@
 Monopoly Action Encoder
 ------------------------
 This module implements the updated ActionEncoder for Phase 2: Action Space Implementation,
-including comprehensive action definitions and trading rules enforcement as per provided
-specifications.
+including comprehensive action definitions, trading rules enforcement, and mapping the encoded
+actions to their required execution parameter lists.
 
 Key Considerations:
-    - Rolling doubles are treated as regular dice rolls (no special rules).
+    - Rolling doubles are treated as regular dice rolls.
     - Trading enforces that:
           * Only unimproved (no houses/hotels) and unmortgaged properties can be traded.
           * Trade offers can be made to multiple players simultaneously.
@@ -15,92 +15,62 @@ Key Considerations:
           * Once a trade is accepted, all other simultaneous offers for the same property are terminated.
           * A player can only have one outstanding trade offer at a time.
     - The gameplay is divided into three phases:
-          * Pre-roll: The current player takes actions (must conclude actions to end this phase).
-          * Out-of-turn: Other players act in a round-robin manner until all skip or a fixed
-                        number of rounds complete.
-          * Post-roll: The current player acts based on the dice outcome (e.g., deciding to buy).
-    - If a player ends post-roll with negative cash, they may attempt to remedy it;
-      failing that initiates bankruptcy.
+          * Pre-roll: The current player takes actions.
+          * Out-of-turn: Other players act in round-robin until completion.
+          * Post-roll: The current player acts based on the dice outcome.
+    - If a player ends post-roll with negative cash, they may attempt remediation; failing that initiates bankruptcy.
 
-Action Definitions:
-    1. Make Trade Offer (Exchange)
-       - Allowed Phases: Pre-roll, out-of-turn
-       - Parameters: To player, property offered, property requested, cash offered, cash requested
-       - Dimensionality: 2240  (adjusted from 2268 to ensure TOTAL_DIM is 2922)
-    2. Make Trade Offer (Sell)
-       - Allowed Phases: Pre-roll, out-of-turn
-       - Parameters: To player, property offered, cash requested
-       - Dimensionality: 252
-    3. Make Trade Offer (Buy)
-       - Allowed Phases: Pre-roll, out-of-turn
-       - Parameters: To player, property requested, cash offered
-       - Dimensionality: 252
-    4. Improve Property
-       - Allowed Phases: Pre-roll, out-of-turn
-       - Parameters: Property, flag for house/hotel
-       - Dimensionality: 44
-    5. Sell House or Hotel
-       - Allowed Phases: Pre-roll, post-roll, out-of-turn
-       - Parameters: Property, flag for house/hotel
-       - Dimensionality: 44
-    6. Sell Property
-       - Allowed Phases: Pre-roll, post-roll, out-of-turn
-       - Parameters: Property
-       - Dimensionality: 28
-    7. Mortgage Property
-       - Allowed Phases: Pre-roll, post-roll, out-of-turn
-       - Parameters: Property
-       - Dimensionality: 28
-    8. Free Mortgage
-       - Allowed Phases: Pre-roll, post-roll, out-of-turn
-       - Parameters: Property
-       - Dimensionality: 28
-    9. Skip Turn
-       - Allowed Phases: Pre-roll, post-roll, out-of-turn
-       - Parameters: None
-       - Dimensionality: 1
-    10. Conclude Actions
-        - Allowed Phases: Pre-roll, post-roll, out-of-turn
-        - Parameters: None
-        - Dimensionality: 1
-    11. Use get out of jail card
-        - Allowed Phase: Pre-roll
-        - Parameters: None
-        - Dimensionality: 1
-    12. Pay Jail Fine
-        - Allowed Phase: Pre-roll
-        - Parameters: None
-        - Dimensionality: 1
-    13. Accept Trade Offer
-        - Allowed Phases: Pre-roll, out-of-turn
-        - Parameters: None
-        - Dimensionality: 1
-    14. Buy Property
-        - Allowed Phase: Post-roll
-        - Parameters: Property
-        - Dimensionality: 1
+Action Definitions and Dimensionalities:
+    1. make_trade_offer_exchange : 2240
+    2. make_trade_offer_sell     : 252
+    3. make_trade_offer_buy      : 252
+    4. improve_property          : 44
+    5. sell_house_hotel          : 44
+    6. sell_property             : 28
+    7. mortgage_property         : 28
+    8. free_mortgage             : 28
+    9. skip_turn                 : 1
+    10. conclude_actions         : 1
+    11. use_get_out_of_jail_card : 1
+    12. pay_jail_fine            : 1
+    13. accept_trade_offer       : 1
+    14. buy_property             : 1
 
 Total action space dimensionality is 2922.
 
 Integration:
-    The encoder maps decision outputs from the agent directly to the parameters required by
-    the in-game execution (_execute_action). Action masking is used to enforce valid moves
+    The encoder maps decision outputs from the agent directly to the parameters needed by the
+    in-game execution command (_execute_action). Action masking is used to enforce valid moves
     based on both the current game phase and game-specific rules (including trade constraints).
 
-Note:
-    This implementation assumes the existence of helper methods on the player/agent:
-        - compute_allowable_pre_roll_actions
-        - compute_allowable_post_roll_actions
-        - compute_allowable_out_of_turn_actions
-        - make_buy_property_decision
-        - trade_proposal
-    It also assumes that property objects include flags (e.g., is_improved, is_mortgaged) to enforce trading rules.
-"""
+Additional Functionality:
+    - This updated version imports the individual mapping builder functions.
+    - It introduces methods to build the full action mapping list and decode a selected action index,
+      returning the associated action parameters required for execution.
 
+Assumptions:
+    - Helper methods exist on the player/agent for computing allowable actions.
+    - Mapping builder functions output lists of dictionaries with the structure:
+         { "action": <action_name>, "parameters": { ... } }
+    - The full action mapping is constructed in the same order as defined in action_definitions.
+"""
 
 import numpy as np
 import logging
 from typing import Dict, Tuple
+
+# Import mapping builder functions from individual mapping files
+from monopoly_simulator.make_trade_offer_exchange_mapping import build_make_trade_offer_exchange_list
+from monopoly_simulator.make_trade_offer_sell_mapping import build_make_trade_offer_sell_list
+from monopoly_simulator.make_trade_offer_buy_mapping import build_make_trade_offer_buy_list
+from monopoly_simulator.improve_property_mapping import build_improve_property_list
+from monopoly_simulator.sell_house_hotel_mapping import build_sell_house_hotel_list
+from monopoly_simulator.sell_property_mapping import build_sell_property_list
+from monopoly_simulator.mortgage_property_mapping import build_mortgage_property_list
+from monopoly_simulator.free_mortgage_mapping import build_free_mortgage_list
+from monopoly_simulator.other_actions_mapping import build_other_actions_mapping
+# Assuming build_buy_property_list is provided via full_action_mapping module or similar
+from monopoly_simulator.full_action_mapping import build_buy_property_list
 
 # Configure logging
 logger = logging.getLogger('monopoly_simulator.action_vectors')
@@ -171,7 +141,7 @@ class ActionEncoder:
                 vector_segment[0] = 1
                 mask_segment[0] = True
                 
-                # Handle multi-dimensional actions
+                # Handle multi-dimensional actions if necessary
                 if dim > 1:
                     self._handle_multi_dimensional_action(
                         vector_segment, 
@@ -199,10 +169,10 @@ class ActionEncoder:
         return encoded_action_vector, action_mask
 
     def _handle_multi_dimensional_action(self, vector_segment: np.ndarray, 
-                                      mask_segment: np.ndarray, 
-                                      action_name: str, 
-                                      player, 
-                                      current_gameboard: Dict):
+                                           mask_segment: np.ndarray, 
+                                           action_name: str, 
+                                           player, 
+                                           current_gameboard: Dict):
         """Handle multi-dimensional actions by setting appropriate vector and mask values."""
         try:
             if action_name.startswith("make_trade_offer"):
@@ -215,9 +185,9 @@ class ActionEncoder:
             logger.error(f"Error handling multi-dimensional action {action_name}: {str(e)}")
 
     def _handle_trade_offer(self, vector_segment: np.ndarray, 
-                          mask_segment: np.ndarray, 
-                          player, 
-                          current_gameboard: Dict):
+                              mask_segment: np.ndarray, 
+                              player, 
+                              current_gameboard: Dict):
         """Handle trade offer actions."""
         # Get valid properties for trading
         tradeable_properties = []
@@ -228,29 +198,29 @@ class ActionEncoder:
                    not getattr(prop, 'is_improved', False)
             ]
         
-        # Set mask for tradeable properties
+        # Set mask for tradeable properties; index 0 is reserved for the action type
         for prop_idx in tradeable_properties:
-            mask_segment[prop_idx + 1] = True  # +1 because index 0 is reserved for action type
+            mask_segment[prop_idx + 1] = True
 
     def _handle_property_improvement(self, vector_segment: np.ndarray, 
-                                   mask_segment: np.ndarray, 
-                                   player, 
-                                   action_name: str):
+                                     mask_segment: np.ndarray, 
+                                     player, 
+                                     action_name: str):
         """Handle property improvement actions."""
         if hasattr(player, 'properties'):
             for i, prop in enumerate(player.properties):
                 can_improve = (action_name == "improve_property" and 
-                             getattr(prop, 'can_be_improved', False))
+                               getattr(prop, 'can_be_improved', False))
                 can_sell = (action_name == "sell_house_hotel" and 
-                          getattr(prop, 'has_improvements', False))
+                            getattr(prop, 'has_improvements', False))
                 
                 if can_improve or can_sell:
                     mask_segment[i + 1] = True  # +1 because index 0 is reserved for action type
 
     def _handle_property_action(self, vector_segment: np.ndarray, 
-                              mask_segment: np.ndarray, 
-                              player, 
-                              action_name: str):
+                                mask_segment: np.ndarray, 
+                                player, 
+                                action_name: str):
         """Handle property-related actions (mortgage, unmortgage, sell)."""
         if hasattr(player, 'properties'):
             for i, prop in enumerate(player.properties):
@@ -278,9 +248,53 @@ class ActionEncoder:
             return len(tradeable_properties) > 0
         return False
 
+    def build_full_action_mapping(self, acting_player, current_gameboard, schema_filepath="monopoly_game_schema_v1-2.json") -> list:
+        """
+        Construct the full flat mapping list for all actions by concatenating the individual mappings.
+        The sequence follows the order defined in action_definitions.
+        Returns:
+            A list of mapping dictionaries. Each dictionary contains:
+              - "action": the action name.
+              - "parameters": a dictionary of parameters required for execution.
+        """
+        full_mapping = []
+        full_mapping.extend(build_make_trade_offer_exchange_list(acting_player,current_gameboard, schema_filepath))
+        full_mapping.extend(build_make_trade_offer_sell_list(acting_player, schema_filepath))
+        full_mapping.extend(build_make_trade_offer_buy_list(acting_player,current_gameboard,schema_filepath))
+        full_mapping.extend(build_improve_property_list(schema_filepath))
+        full_mapping.extend(build_sell_house_hotel_list(acting_player,current_gameboard,schema_filepath))
+        full_mapping.extend(build_sell_property_list(acting_player,current_gameboard,schema_filepath))
+        full_mapping.extend(build_mortgage_property_list(acting_player,current_gameboard,schema_filepath))
+        full_mapping.extend(build_free_mortgage_list(acting_player,current_gameboard,schema_filepath))
+        full_mapping.extend(build_other_actions_mapping(acting_player, current_gameboard))
+        full_mapping.extend(build_buy_property_list())
+        return full_mapping
+
+    def decode_action(self, acting_player, current_gameboard, chosen_index: int, schema_filepath="monopoly_game_schema_v1-2.json") -> Dict:
+        """
+        Given a chosen action index (from 0 to 2921), decode it into the corresponding mapping entry
+        which contains the action and the parameters required to execute it.
+        
+        Args:
+            acting_player: The player whose action is being decoded.
+            current_gameboard: The current game board dict.
+            chosen_index: Flattened index of the chosen action in the full action space.
+            schema_filepath: Schema file path for mapping builders.
+            
+        Returns:
+            A dictionary with keys "action" and "parameters" corresponding to the selected action.
+        """
+        full_mapping = self.build_full_action_mapping(acting_player, current_gameboard, schema_filepath)
+        if chosen_index < 0 or chosen_index >= len(full_mapping):
+            logger.error(f"Invalid action index: {chosen_index}. It must be between 0 and {len(full_mapping)-1}")
+            raise ValueError("Chosen action index is out of range.")
+        selected_mapping = full_mapping[chosen_index]
+        logger.debug(f"Decoded action at index {chosen_index}: {selected_mapping}")
+        return selected_mapping
+
     def log_action_encoding(self, encoded_action_vector: np.ndarray, 
-                          action_mask: np.ndarray, 
-                          game_elements: Dict):
+                            action_mask: np.ndarray, 
+                            game_elements: Dict):
         """Log the action encoding and mask to game history."""
         try:
             if 'history' not in game_elements:
@@ -297,45 +311,19 @@ class ActionEncoder:
         except Exception as e:
             logger.error(f"Error logging action encoding: {str(e)}")
 
-    def _is_trade_allowed(self, player, current_gameboard):
-        """
-        Enforce trading rules:
-            1. There must be more than one player.
-            2. A player can have only one outstanding trade offer at a time.
-            3. Only properties that are unimproved and unmortgaged can be traded.
-               (Property objects should have boolean flags: is_improved, is_mortgaged.)
-        
-        Note: The processing of simultaneous trade offers and cancellation upon acceptance is handled externally.
-        
-        :param player: The player initiating the trade.
-        :param current_gameboard: Dict containing the current game state.
-        :return: bool indicating if trade actions are permitted.
-        """
-        if len(current_gameboard.get('players', [])) <= 1:
-            return False
-        
-        if getattr(player, "outstanding_trade_offer", None) is not None:
-            return False
-        
-        # Further property eligibility checks are assumed to be done when constructing the proposal.
-        return True
-
     def make_decision(self, player, current_gameboard, game_phase):
         """
         High-level method integrating encoded action vectors with specific decision outputs.
-
         Handles:
             - Property actions (e.g., buy decisions post-roll).
             - Trade proposals (subject to trading rules and phase).
-            - Additional financial or developmental decisions (mortgage, improvement, bankruptcy, etc.).
-
-        :param player: The current player.
-        :param current_gameboard: Dict representing the game state.
-        :param game_phase: str; one of "pre_roll", "post_roll", "out_of_turn".
-        :return: A dictionary containing:
-                 - 'action_vector': The encoded action vector.
-                 - 'action_mask': Boolean mask indicating valid actions.
-                 - Additional decision outputs (e.g., 'buy_property', 'trade_proposal').
+            - Additional financial or developmental decisions such as mortgage or improvement.
+        
+        Returns:
+            A dictionary containing:
+            - 'action_vector': The encoded action vector.
+            - 'action_mask': Boolean mask indicating valid actions.
+            - Additional decision outputs (e.g., 'buy_property', 'trade_proposal').
         """
         encoded_vector, mask = self.encode(player, current_gameboard, game_phase)
         decision = {}
@@ -354,7 +342,6 @@ class ActionEncoder:
             decision['trade_proposal'] = player.agent.trade_proposal(player, current_gameboard)
 
         # Additional decisions (e.g., mortgage, improvement, bankruptcy) can be integrated similarly.
-
         decision['action_vector'] = encoded_vector
         decision['action_mask'] = mask
 

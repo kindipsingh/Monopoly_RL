@@ -51,14 +51,14 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
     
     return property_list
 
-def build_mortgage_property_list(schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_mortgage_property_list(player,current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
     """
     Build a flat list for the "mortgage_property" action.
 
     This mapping requires a flat entry for each property.
     The resulting list consists of 28 entries where each entry is a flat dictionary with:
       - "action": "mortgage_property"
-      - "parameters": { "property": <property_name> }
+      - "parameters": { "asset": <property_name> }
 
     Returns:
         A list of 28 dictionaries.
@@ -73,7 +73,9 @@ def build_mortgage_property_list(schema_filepath="monopoly_game_schema_v1-2.json
         mapping_entry = {
             "action": "mortgage_property",
             "parameters": {
-                "property": prop["name"]
+                "player":player,
+                "asset": prop["name"],
+                "current_gameboard": current_gameboard
             }
         }
         flat_mapping.append(mapping_entry)
@@ -82,11 +84,3 @@ def build_mortgage_property_list(schema_filepath="monopoly_game_schema_v1-2.json
         raise ValueError(f"Expected 28 entries but got {len(flat_mapping)}")
     
     return flat_mapping
-
-# Example usage:
-if __name__ == "__main__":
-    mapping_list = build_mortgage_property_list()
-    print("Total number of entries:", len(mapping_list))
-    print("Sample entries:")
-    for entry in mapping_list[:5]:
-        print(entry)
