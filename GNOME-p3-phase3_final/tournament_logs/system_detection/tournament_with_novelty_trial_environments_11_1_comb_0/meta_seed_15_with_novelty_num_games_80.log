@@ -1,0 +1,26 @@
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Beginning game set up...
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized bank.
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized all locations on board.
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized dies
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized cards
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized players and decision agents
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated game history data structures
+2025-03-29 20:19:17,506:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated schema data structures
+2025-03-29 20:19:17,507:monopoly_simulator.logging_info:DEBUG:Sucessfully initialized all player agents.
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_1
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.player:DEBUG:We are in the pre-roll phase for player_1
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_1
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.background_agent:DEBUG:player_1: I am skipping turn
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.player:DEBUG:Executing _execute_action for player_1
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.action_choices:DEBUG:player is skipping turn
+2025-03-29 20:19:17,509:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_1
+2025-03-29 20:19:17,514:monopoly_simulator.logging_info.player:DEBUG:computing allowable out-of-turn actions for player_3
+2025-03-29 20:19:17,514:monopoly_simulator.logging_info.player:DEBUG:We are in the out-of-turn phase for player_3
+2025-03-29 20:19:17,514:monopoly_simulator.logging_info.player:DEBUG:computing allowable out-of-turn actions for player_3
+2025-03-29 20:19:17,514:monopoly_simulator.logging_info.player:DEBUG:computing allowable out-of-turn actions for player_3
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.action_choices:DEBUG:DEBUG OFFER OBJECT: {'property_set_offered': [], 'property_set_wanted': [<monopoly_simulator.location.UtilityLocation object at 0x10b2d6e60>], 'cash_offered': 187, 'cash_wanted': 0}
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.action_choices:DEBUG:Instantiating data structures outstanding_trade_offer and setting is_trade_offer_outstanding to True to enable trade offer to player_1
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.action_choices:DEBUG:player_3 has no properties to offer to player_1
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.action_choices:DEBUG:player_1 player does not own Electric Company. Invalid property requested. Returning failure code.
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.action_choices:DEBUG:player is skipping turn
+2025-03-29 20:19:17,523:monopoly_simulator.logging_info.player:DEBUG:Executing _execute_action for player_3

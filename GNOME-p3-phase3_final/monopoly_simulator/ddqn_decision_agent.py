@@ -13,6 +13,7 @@ from monopoly_simulator.training_ddqnn import DDQNAgent
 import logging
 from monopoly_simulator import action_validator
 from monopoly_simulator.flag_config import flag_config_dict
+from monopoly_simulator.flag_config import flag_config_dict
 
 ##############################################################
 # Logging configuration
@@ -198,7 +199,7 @@ class DDQNDecisionAgent(Agent):
             else:
                 action_idx = -1
             
-            mapping = self.action_encoder.decode_action(player, current_gameboard,action_idx)
+            mapping = self.action_encoder.decode_action(player, current_gameboard, action_idx)
             action_function = mapping.get("action")
             parameters = mapping.get("parameters", {})
         
@@ -223,21 +224,59 @@ class DDQNDecisionAgent(Agent):
                     raise ValueError(f"Target player '{target_name}' not found.")
                 parameters["to_player"] = target_player
         
-            if action_function.__name__.startswith("make_trade_offer") and action_idx<2268:
-                parameters = action_validator.validate_trade_offer_parameters(parameters, player, current_gameboard, rl_logger)
-                if parameters is None:
-                    # If validation fails, return failure code.
-                    return {"result": flag_config_dict['failure_code'], "parameters": {}}
+            # For trade offers, first convert the offer object to have numeric cash values.
+            if action_function.__name__.startswith("make_trade_offer"):
+                offer = parameters.get("offer")
+                if offer is not None:
+                    # Copy the offer object to ensure original data is preserved during conversion.
+                    raw_offer = offer.copy()
+                    rl_logger.debug(f"Trade offer before conversion: {raw_offer}")
+                    # Convert cash values.
+                    converted_offer = action_validator.convert_cash_values(raw_offer, current_gameboard, rl_logger)
+                    # Convert property names to objects.
+                    converted_offer = action_validator.convert_offer_properties(converted_offer, current_gameboard, rl_logger)
+                    parameters["offer"] = converted_offer
+                    rl_logger.debug(f"Trade offer after conversion: {parameters['offer']}")
         
             if action_function.__name__ == "make_sell_property_offer":
                 if "from_player" not in parameters:
                     parameters["from_player"] = player
-                parameters = action_validator.convert_sell_offer_asset(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"Asset parameter before conversion: {parameters.get('asset')}")
+                parameters = action_validator.validate_sell_property(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"Asset parameter after conversion: {parameters.get('asset')}")
+            
+            if action_function.__name__ == "sell_property":
+                rl_logger.debug(f"sell_property: Asset parameter before conversion: {parameters.get('asset')}")
+                parameters = action_validator.validate_sell_property(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"sell_property: Asset parameter after conversion: {parameters.get('asset')}")
+            
+            if action_function.__name__ == "sell_house_hotel":
+                rl_logger.debug(f"sell_house_hotel: Asset parameter before conversion: {parameters.get('asset')}")
+                parameters = action_validator.validate_sell_house_hotel_asset(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"sell_house_hotel: Asset parameter after conversion: {parameters.get('asset')}")
+            
+            if action_function.__name__ in ("improve_property", "reverse_improve_property"):
+                rl_logger.debug(f"{action_function.__name__}: Asset parameter before conversion: {parameters.get('asset')}")
+                parameters = action_validator.validate_improve_property(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"{action_function.__name__}: Asset parameter after conversion: {parameters.get('asset')}")
+            
+            if action_function.__name__ == "free_mortgage":
+                rl_logger.debug(f"free_mortgage: Asset parameter before conversion: {parameters.get('asset')}")
+                parameters = action_validator.validate_free_mortgage(parameters, current_gameboard, rl_logger)
+                rl_logger.debug(f"free_mortgage: Asset parameter after conversion: {parameters.get('asset')}")
         
             if callable(action_function):
                 result = action_function(**parameters)
             else:
                 result = action_function
+            
+            # Updated fallback: if result is a failure code, explicitly perform skip_turn
+            if result == flag_config_dict['failure_code']:
+                rl_logger.info("Failure code encountered in _make_decision. Defaulting explicitly to skip_turn action.")
+                fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
+                skip_result = fallback_action() if callable(fallback_action) else fallback_action
+                rl_logger.info(f"Fallback skip_turn executed with result: {skip_result}")
+                return {"result": skip_result, "parameters": {}}
         
             return {"result": result, "parameters": parameters}
         
@@ -245,10 +284,10 @@ class DDQNDecisionAgent(Agent):
             logger.error(f"Error in _make_decision: {str(e)}")
             rl_logger.error(f"Error in _make_decision: {str(e)}", exc_info=True)
             fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
-            fallback_result = fallback_action() if callable(fallback_action) else fallback_action
-            return {"result": fallback_result, "parameters": {}}
-
-    
+            skip_result = fallback_action() if callable(fallback_action) else fallback_action
+            rl_logger.info(f"Due to exception, executed fallback skip_turn with result: {skip_result}")
+            return {"result": skip_result, "parameters": {}}
+        
     def _calculate_reward(self, player, current_gameboard):
         net_worth = player.current_cash
         for asset in player.assets:

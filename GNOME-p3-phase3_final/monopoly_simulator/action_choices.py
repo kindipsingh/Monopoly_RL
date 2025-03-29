@@ -859,9 +859,13 @@ def make_trade_offer(from_player, offer, to_player, current_gameboard=None):
         logger.debug("Trade offer is being made to a player who has lost the game already! Returning failure code.")
         return flag_config_dict['failure_code']
 
+    logger.debug("DEBUG OFFER OBJECT: %s", offer)
     if to_player.is_trade_offer_outstanding:
         logger.debug(to_player.player_name+' already has a trade offer. You must wait. Returning failure code')
         return flag_config_dict['failure_code']
+
+    # Debug log the entire offer object to troubleshoot potential type issues
+       
 
     elif offer['cash_offered']<0 or offer['cash_wanted']<0:
         logger.debug('Cash offered or cash wanted amounts cannot be negative. Only positive amounts allowed. Returning failure code')

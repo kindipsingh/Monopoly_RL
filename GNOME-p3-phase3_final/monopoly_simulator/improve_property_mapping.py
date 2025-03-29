@@ -51,52 +51,45 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
     
     return property_list
 
-def build_improve_property_list(schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_improve_property_list(player, current_gameboard, schema_filepath="monopoly_game_schema_v1-2.json"):
     """
-    Build a flat list for the "improve_property" action.
+    Build a flat list for the "improve_property" action mapping.
 
-    For property improvements, we want to build a 44-dimensional space, corresponding to 
-    22 viable "real_estate" properties (as improvements only apply to real estate) and two options 
-    for the flag (e.g. "house" or "hotel").
-
+    Each mapping entry contains:
+      - "action": "improve_property"
+      - "parameters": a dictionary with keys:
+            "player": the player object,
+            "asset": the property name (string),  # Will later be converted if needed.
+            "current_gameboard": the current gameboard dictionary.
+    
     Returns:
-        A list of 44 dictionaries. Each dictionary has:
-            - "action": "improve_property"
-            - "parameters": a flat dictionary with keys:
-                  "property": the name of the real estate property
-                  "flag": either "house" or "hotel"
-                  
-    Total combinations: (# of real estate properties, expected to be 22) x 2 = 44.
+        A list of mapping dictionaries for improve_property.
     """
     properties = load_property_objects_from_schema(schema_filepath)
-    # Filter only "real_estate" properties.
-    real_estate_properties = [prop for prop in properties if prop.get("loc_class") == "real_estate"]
+    if len(properties) != 28:
+        raise ValueError(f"Expected 28 property objects but got {len(properties)}")
     
-    if len(real_estate_properties) != 22:
-        raise ValueError(f"Expected 22 real estate properties, but got {len(real_estate_properties)}")
-    
-    flags = ["house", "hotel"]
-    
-    flat_mapping = []
-    for prop in real_estate_properties:
-        for flag in flags:
-            mapping_entry = {
-                "action": "improve_property",
-                "parameters": {
-                    "asset": prop["name"],
-                    "flag": flag
-                }
+    mapping_list = []
+    for prop in properties:
+        mapping_entry = {
+            "action": "improve_property",
+            "parameters": {
+                "player": player,
+                "asset": prop["name"],
+                "current_gameboard": current_gameboard
             }
-            flat_mapping.append(mapping_entry)
+        }
+        mapping_list.append(mapping_entry)
     
-    if len(flat_mapping) != 44:
-        raise ValueError(f"Expected 44 entries but got {len(flat_mapping)}")
-    
-    return flat_mapping
+    return mapping_list
 
 # Example usage:
 if __name__ == "__main__":
-    mapping_list = build_improve_property_list()
+    # Create dummy player and gameboard for testing
+    dummy_player = Player(1000, "P1", "red")
+    dummy_gameboard = {"dummy": "gameboard"}
+    
+    mapping_list = build_improve_property_list(dummy_player, dummy_gameboard)
     print("Total number of entries:", len(mapping_list))
     print("Sample entries:")
     for entry in mapping_list[:5]:

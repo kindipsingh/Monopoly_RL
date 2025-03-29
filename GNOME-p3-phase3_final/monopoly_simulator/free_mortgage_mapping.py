@@ -51,20 +51,22 @@ def load_property_objects_from_schema(schema_filepath="monopoly_game_schema_v1-2
 
     return property_list
 
-def build_free_mortgage_list(player,current_gameboard,schema_filepath="monopoly_game_schema_v1-2.json"):
+def build_free_mortgage_list(player, current_gameboard, schema_filepath="monopoly_game_schema_v1-2.json"):
     """
-    Build a flat list for the "free_mortgage" action.
+    Build a flat list for the "free_mortgage" action mapping.
 
-    This mapping requires a flat entry for each property.
-    The resulting list consists of 28 entries where each entry is a flat dictionary with:
+    Each mapping entry contains:
       - "action": "free_mortgage"
-      - "parameters": { "property": <property_name> }
+      - "parameters": a dictionary with keys:
+            "player": the player object,
+            "asset": the property name (string) which will later be converted to a property object,
+            "current_gameboard": the current gameboard dictionary.
 
     Returns:
-        A list of 28 dictionaries.
+        A list of 28 mapping dictionaries.
     """
     properties = load_property_objects_from_schema(schema_filepath)
-
+    
     if len(properties) != 28:
         raise ValueError(f"Expected 28 property objects but got {len(properties)}")
 
@@ -73,7 +75,7 @@ def build_free_mortgage_list(player,current_gameboard,schema_filepath="monopoly_
         mapping_entry = {
             "action": "free_mortgage",
             "parameters": {
-                "player":player,
+                "player": player,
                 "asset": prop["name"],
                 "current_gameboard": current_gameboard
             }

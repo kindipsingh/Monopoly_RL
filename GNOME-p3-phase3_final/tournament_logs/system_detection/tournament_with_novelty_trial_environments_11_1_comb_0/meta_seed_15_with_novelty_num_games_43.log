@@ -1,0 +1,16 @@
+2025-03-29 20:19:16,811:monopoly_simulator.logging_info.init_game_elements:DEBUG:Beginning game set up...
+2025-03-29 20:19:16,811:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized bank.
+2025-03-29 20:19:16,811:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized all locations on board.
+2025-03-29 20:19:16,811:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized dies
+2025-03-29 20:19:16,812:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized cards
+2025-03-29 20:19:16,812:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized players and decision agents
+2025-03-29 20:19:16,812:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated game history data structures
+2025-03-29 20:19:16,812:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated schema data structures
+2025-03-29 20:19:16,812:monopoly_simulator.logging_info:DEBUG:Sucessfully initialized all player agents.
+2025-03-29 20:19:16,814:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_3
+2025-03-29 20:19:16,814:monopoly_simulator.logging_info.player:DEBUG:We are in the pre-roll phase for player_3
+2025-03-29 20:19:16,814:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_3
+2025-03-29 20:19:16,814:monopoly_simulator.logging_info.player:DEBUG:computing allowable pre-roll actions for player_3
+2025-03-29 20:19:16,819:monopoly_simulator.logging_info.action_choices:DEBUG:player_3player does not own this property and cannot make an offer. Returning failure code
+2025-03-29 20:19:16,819:monopoly_simulator.logging_info.action_choices:DEBUG:player is skipping turn
+2025-03-29 20:19:16,819:monopoly_simulator.logging_info.player:DEBUG:Executing _execute_action for player_3

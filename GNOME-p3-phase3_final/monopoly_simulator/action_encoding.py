@@ -261,7 +261,7 @@ class ActionEncoder:
         full_mapping.extend(build_make_trade_offer_exchange_list(acting_player,current_gameboard, schema_filepath))
         full_mapping.extend(build_make_trade_offer_sell_list(acting_player, schema_filepath))
         full_mapping.extend(build_make_trade_offer_buy_list(acting_player,current_gameboard,schema_filepath))
-        full_mapping.extend(build_improve_property_list(schema_filepath))
+        full_mapping.extend(build_improve_property_list(acting_player,current_gameboard,schema_filepath))
         full_mapping.extend(build_sell_house_hotel_list(acting_player,current_gameboard,schema_filepath))
         full_mapping.extend(build_sell_property_list(acting_player,current_gameboard,schema_filepath))
         full_mapping.extend(build_mortgage_property_list(acting_player,current_gameboard,schema_filepath))
