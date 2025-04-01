@@ -267,7 +267,7 @@ class ActionEncoder:
         full_mapping.extend(build_mortgage_property_list(acting_player,current_gameboard,schema_filepath))
         full_mapping.extend(build_free_mortgage_list(acting_player,current_gameboard,schema_filepath))
         full_mapping.extend(build_other_actions_mapping(acting_player, current_gameboard))
-        full_mapping.extend(build_buy_property_list())
+        full_mapping.extend(build_buy_property_list(acting_player,current_gameboard,schema_filepath))
         return full_mapping
 
     def decode_action(self, acting_player, current_gameboard, chosen_index: int, schema_filepath="monopoly_game_schema_v1-2.json") -> Dict:

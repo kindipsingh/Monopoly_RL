@@ -267,18 +267,21 @@ class DDQNDecisionAgent(Agent):
         
             if callable(action_function):
                 result = action_function(**parameters)
+                rl_logger.debug("hello")
             else:
                 result = action_function
+                rl_logger.debug("hello2")
             
             # Updated fallback: if result is a failure code, explicitly perform skip_turn
             if result == flag_config_dict['failure_code']:
                 rl_logger.info("Failure code encountered in _make_decision. Defaulting explicitly to skip_turn action.")
-                fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
-                skip_result = fallback_action() if callable(fallback_action) else fallback_action
-                rl_logger.info(f"Fallback skip_turn executed with result: {skip_result}")
-                return {"result": skip_result, "parameters": {}}
+                fallback_action="skip_turn" if game_phase != "post_roll" else "concluded_actions"
+                # fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
+                # skip_result = fallback_action() if callable(fallback_action) else fallback_action
+                # rl_logger.info(f"Fallback skip_turn executed with result: {skip_result}")
+                return (fallback_action, dict())
         
-            return {"result": result, "parameters": parameters}
+            return (action_function,parameters)
         
         except Exception as e:
             logger.error(f"Error in _make_decision: {str(e)}")
