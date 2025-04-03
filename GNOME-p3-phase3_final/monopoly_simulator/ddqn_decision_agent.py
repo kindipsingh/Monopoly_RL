@@ -162,56 +162,81 @@ class DDQNDecisionAgent(Agent):
         rl_logger.info(f"Player {player.player_name} taking {len(actions)} actions to handle negative cash balance")
         return actions
     
-
-
-
     def _make_decision(self, player, current_gameboard, game_phase):
         """
         Make a decision based on the current game state using the DDQN agent.
-        This method uses the DDQN's selected action index to decode the corresponding action mapping,
-        retrieving both the action (function or label) and the required parameters.
+        
+        This method:
+        1. Encodes the current game state
+        2. Builds the full action mapping
+        3. Creates an action mask for valid actions
+        4. Selects an action from valid actions
+        5. Returns a tuple of (action_function/name, parameters) that gameplay_socket_phase3.py expects
         
         Returns:
-            A dictionary with keys:
-            - "result": the output of the executed action (or action identifier if not callable)
-            - "parameters": a dictionary of the parameters required for action execution.
+            A tuple of (action_function/name, parameters) where:
+            - action_function/name: Either a callable function or a string action name
+            - parameters: A dictionary of parameters required for the action
         """
         try:
             rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase} (background agent style)")
+            
+            # Create state vector and tensor
             state_vector = self.state_encoder.encode_state(current_gameboard)
-            _, action_mask = self.action_encoder.encode(player, current_gameboard, game_phase)
             state_tensor = state_vector.to(self.device)
+            
+            # Build the full action mapping
+            action_encoder = ActionEncoder()
+            full_mapping = action_encoder.build_full_action_mapping(player, current_gameboard)
+            
+            # Import and use the create_action_mask function to get valid actions
+            from monopoly_simulator.action_mapping_builder import create_action_mask
+            action_mask = create_action_mask(player, current_gameboard, game_phase)
             mask_tensor = torch.BoolTensor(action_mask).to(self.device)
             
-            ddqn_selected = self.ddqn_agent.select_action(state_tensor)
-            rl_logger.debug(f"DDQN selected value: {ddqn_selected}")  # Log ddqn_selected for debugging purposes
+            # Find indices of valid actions
+            valid_action_indices = np.where(action_mask)[0]
             
-            # Ensure that action_idx is an integer. If not, extract it or default to -1.
-            if isinstance(ddqn_selected, int):
-                action_idx = ddqn_selected
-                rl_logger.debug(f"Action_idx value: {action_idx}")
-            elif isinstance(ddqn_selected, dict):
-                try:
-                    action_idx = int(ddqn_selected.get("action_index", -1))
-                except Exception as ex:
-                    rl_logger.error(f"Failed to extract action_index from dict: {ddqn_selected}. Error: {ex}")
-                    action_idx = -1
+            if len(valid_action_indices) == 0:
+                rl_logger.warning(f"No valid actions found for player {player.player_name} in phase {game_phase}")
+                # Default to skip_turn or conclude_actions based on game phase
+                if game_phase == "post_roll":
+                    action_name = "concluded_actions"
+                else:
+                    action_name = "skip_turn"
+                rl_logger.info(f"Defaulting to {action_name}")
+                return (action_name, {})
             else:
-                action_idx = -1
+                # Check if there are valid actions other than skip_turn and concluded_actions
+                non_skip_actions = []
+                for idx in valid_action_indices:
+                    action_name = full_mapping[idx]["action"]
+                    if action_name not in ["skip_turn", "concluded_actions"]:
+                        non_skip_actions.append(idx)
+                
+                # If there are non-skip actions available, prioritize them
+                if len(non_skip_actions) > 0:
+                    rl_logger.info(f"Found {len(non_skip_actions)} non-skip actions. Prioritizing these.")
+                    action_idx = np.random.choice(non_skip_actions)
+                    rl_logger.debug(f"Randomly selected non-skip action index: {action_idx}")
+                else:
+                    # Otherwise, select from all valid actions
+                    action_idx = np.random.choice(valid_action_indices)
+                    rl_logger.debug(f"Randomly selected valid action index: {action_idx}")
+                
+                # Later, you can replace this with DDQN selection from valid actions:
+                # action_idx = self.ddqn_agent.select_action(state_tensor, mask_tensor)
             
-            mapping = self.action_encoder.decode_action(player, current_gameboard, action_idx)
-            action_function = mapping.get("action")
+            rl_logger.debug(f"Action_idx value: {action_idx}")
+            
+            # Decode the selected action
+            mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
+            action_name = mapping.get("action")
             parameters = mapping.get("parameters", {})
-        
-            rl_logger.info(f"Decoded action mapping for player {player.player_name} in phase {game_phase}: {mapping}")
-        
-            if isinstance(action_function, str):
-                action_callable = getattr(action_choices, action_function, None)
-                if action_callable is None:
-                    rl_logger.error(f"Action '{action_function}' is not defined in action_choices.")
-                    raise ValueError(f"Action '{action_function}' is not defined.")
-                action_function = action_callable
-        
+            
+            rl_logger.info(f"Decoded action: {action_name} with parameters: {parameters}")
+            
+            # Process parameters for special cases
             if "to_player" in parameters and isinstance(parameters["to_player"], str):
                 target_name = parameters["to_player"]
                 target_player = None
@@ -221,76 +246,54 @@ class DDQNDecisionAgent(Agent):
                         break
                 if target_player is None:
                     rl_logger.error(f"Target player '{target_name}' not found in the current gameboard.")
-                    raise ValueError(f"Target player '{target_name}' not found.")
+                    if game_phase == "post_roll":
+                        return ("concluded_actions", {})
+                    else:
+                        return ("skip_turn", {})
                 parameters["to_player"] = target_player
-        
-            # For trade offers, first convert the offer object to have numeric cash values.
-            if action_function.__name__.startswith("make_trade_offer"):
+            
+            # For trade offers, convert the offer object
+            if action_name == "make_trade_offer":
                 offer = parameters.get("offer")
                 if offer is not None:
-                    # Copy the offer object to ensure original data is preserved during conversion.
+                    # Copy the offer object to ensure original data is preserved during conversion
                     raw_offer = offer.copy()
                     rl_logger.debug(f"Trade offer before conversion: {raw_offer}")
-                    # Convert cash values.
+                    # Convert cash values
                     converted_offer = action_validator.convert_cash_values(raw_offer, current_gameboard, rl_logger)
-                    # Convert property names to objects.
+                    # Convert property names to objects
                     converted_offer = action_validator.convert_offer_properties(converted_offer, current_gameboard, rl_logger)
                     parameters["offer"] = converted_offer
                     rl_logger.debug(f"Trade offer after conversion: {parameters['offer']}")
-        
-            if action_function.__name__ == "make_sell_property_offer":
-                if "from_player" not in parameters:
-                    parameters["from_player"] = player
-                rl_logger.debug(f"Asset parameter before conversion: {parameters.get('asset')}")
-                parameters = action_validator.validate_sell_property(parameters, current_gameboard, rl_logger)
-                rl_logger.debug(f"Asset parameter after conversion: {parameters.get('asset')}")
             
-            if action_function.__name__ == "sell_property":
-                rl_logger.debug(f"sell_property: Asset parameter before conversion: {parameters.get('asset')}")
+            # Validate and convert asset parameters for property-related actions
+            if action_name == "sell_property":
                 parameters = action_validator.validate_sell_property(parameters, current_gameboard, rl_logger)
-                rl_logger.debug(f"sell_property: Asset parameter after conversion: {parameters.get('asset')}")
-            
-            if action_function.__name__ == "sell_house_hotel":
-                rl_logger.debug(f"sell_house_hotel: Asset parameter before conversion: {parameters.get('asset')}")
+            elif action_name == "sell_house_hotel":
                 parameters = action_validator.validate_sell_house_hotel_asset(parameters, current_gameboard, rl_logger)
-                rl_logger.debug(f"sell_house_hotel: Asset parameter after conversion: {parameters.get('asset')}")
-            
-            if action_function.__name__ in ("improve_property", "reverse_improve_property"):
-                rl_logger.debug(f"{action_function.__name__}: Asset parameter before conversion: {parameters.get('asset')}")
+            elif action_name in ["improve_property", "reverse_improve_property"]:
                 parameters = action_validator.validate_improve_property(parameters, current_gameboard, rl_logger)
-                rl_logger.debug(f"{action_function.__name__}: Asset parameter after conversion: {parameters.get('asset')}")
-            
-            if action_function.__name__ == "free_mortgage":
-                rl_logger.debug(f"free_mortgage: Asset parameter before conversion: {parameters.get('asset')}")
+            elif action_name == "free_mortgage":
                 parameters = action_validator.validate_free_mortgage(parameters, current_gameboard, rl_logger)
-                rl_logger.debug(f"free_mortgage: Asset parameter after conversion: {parameters.get('asset')}")
-        
-            if callable(action_function):
-                result = action_function(**parameters)
-                rl_logger.debug("hello")
-            else:
-                result = action_function
-                rl_logger.debug("hello2")
+            elif action_name == "mortgage_property":
+                parameters = action_validator.validate_free_mortgage(parameters, current_gameboard, rl_logger)
             
-            # Updated fallback: if result is a failure code, explicitly perform skip_turn
-            if result == flag_config_dict['failure_code']:
-                rl_logger.info("Failure code encountered in _make_decision. Defaulting explicitly to skip_turn action.")
-                fallback_action="skip_turn" if game_phase != "post_roll" else "concluded_actions"
-                # fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
-                # skip_result = fallback_action() if callable(fallback_action) else fallback_action
-                # rl_logger.info(f"Fallback skip_turn executed with result: {skip_result}")
-                return (fallback_action, dict())
-        
-            return (action_function,parameters)
+            # Important: Replace "current_gameboard" string with the actual current_gameboard
+            if "current_gameboard" in parameters and parameters["current_gameboard"] == "current_gameboard":
+                parameters["current_gameboard"] = current_gameboard
+            
+            # Return the action name and parameters - this is what gameplay_socket_phase3.py expects
+            return (action_name, parameters)
         
         except Exception as e:
             logger.error(f"Error in _make_decision: {str(e)}")
             rl_logger.error(f"Error in _make_decision: {str(e)}", exc_info=True)
-            fallback_action = action_choices.skip_turn if game_phase != "post_roll" else action_choices.concluded_actions
-            skip_result = fallback_action() if callable(fallback_action) else fallback_action
-            rl_logger.info(f"Due to exception, executed fallback skip_turn with result: {skip_result}")
-            return {"result": skip_result, "parameters": {}}
-        
+            # Return a safe default action based on game phase
+            if game_phase == "post_roll":
+                return ("concluded_actions", {})
+            else:
+                return ("skip_turn", {})
+
     def _calculate_reward(self, player, current_gameboard):
         net_worth = player.current_cash
         for asset in player.assets:
