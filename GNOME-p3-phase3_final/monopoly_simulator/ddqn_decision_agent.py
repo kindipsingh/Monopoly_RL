@@ -14,6 +14,7 @@ import logging
 from monopoly_simulator import action_validator
 from monopoly_simulator.flag_config import flag_config_dict
 from monopoly_simulator.flag_config import flag_config_dict
+from monopoly_simulator import agent_helper_functions_v2 as agent_helper_functions
 
 ##############################################################
 # Logging configuration
@@ -134,33 +135,338 @@ class DDQNDecisionAgent(Agent):
         rl_logger.debug(f"Player {player.player_name} making post-roll move")
         return self._make_decision(player, current_gameboard, "post_roll")
     
-    def make_buy_property_decision(self, player, current_gameboard, property_positions, price):
-        rl_logger.debug(f"Player {player.player_name} deciding whether to buy property at position {property_positions} for ${price}")
-        decision = self._make_decision(player, current_gameboard, "post_roll")
+    def make_buy_property_decision(self, player, current_gameboard, asset):
+        """
+        The agent decides to buy the property if:
+        (i) it can 'afford' it. Our definition of afford is that we must have at least go_increment cash balance after
+        the purchase.
+        (ii) we can obtain a full color set through the purchase, and still have positive cash balance afterwards (though
+        it may be less than go_increment).
+        :param player: A Player instance. You should expect this to be the player that is 'making' the decision (i.e. the player
+        instantiated with the functions specified by this decision agent).
+        :param current_gameboard: A dict. The global data structure representing the current game board.
+        :return: A Boolean. If True, then you decided to purchase asset from the bank, otherwise False. We allow you to
+        purchase the asset even if you don't have enough cash; however, if you do you will end up with a negative
+        cash balance and will have to handle that if you don't want to lose the game at the end of your move (see notes
+        in handle_negative_cash_balance)
+        """
+        decision = False
+        ####
+        #if not hasattr(asset, 'price'):
+        #    return(decision)
+        ###
+        rl_logger.info(f"Make decision is being set to {decision} ")
+
+        if player.current_cash - asset.price >= current_gameboard['go_increment']:  # case 1: can we afford it?
+            logger.debug(player.player_name+ ': I will attempt to buy '+ asset.name+ ' from the bank.')
+            decision = True
+        elif asset.price <= player.current_cash and agent_helper_functions.will_property_complete_set(player,asset,current_gameboard):
+            logger.debug(player.player_name+ ': I will attempt to buy '+ asset.name+ ' from the bank.')
+            decision = True
+
         
-        if isinstance(decision, dict) and 'parameters' in decision and decision['parameters'].get("action_name") == "buy_property":
-            rl_logger.info(f"Player {player.player_name} decided to BUY property at position {property_positions} for ${price}")
-            return True
+        return decision
+
+
+    def make_bid(self, player, current_gameboard, asset, current_bid):
+        """
+        Decide the amount you wish to bid for asset in auction, given the current_bid that is currently going. If you don't
+        return a bid that is strictly higher than current_bid you will be removed from the auction and won't be able to
+        bid anymore. Note that it is not necessary that you are actually on the location on the board representing asset, since
+        you will be invited to the auction automatically once a player who lands on a bank-owned asset rejects buying that asset
+        (this could be you or anyone else).
+        :param player: A Player instance. You should expect this to be the player that is 'making' the decision (i.e. the player
+        instantiated with the functions specified by this decision agent).
+        :param current_gameboard: A dict. The global data structure representing the current game board.
+        :param asset: An purchaseable instance of Location (i.e. real estate, utility or railroad)
+        :param current_bid: The current bid that is going in the auction. If you don't bid higher than this amount, the bank
+        will remove you from the auction proceedings. You could also always return 0 to voluntarily exit the auction.
+        :return: An integer that indicates what you wish to bid for asset
+        """
+        decision = False
+        ####
+        #if not hasattr(asset, 'price'):
+        #    return(decision)
+        ###
+        if current_bid < asset.price:
+            new_bid = current_bid + (asset.price-current_bid)/2
+            if new_bid < player.current_cash:
+                return new_bid
+            else:   # We are aware that this can be simplified with a simple return 0 statement at the end. However in the final baseline agent
+                    # the return 0's would be replaced with more sophisticated rules. Think of them as placeholders.
+                return 0 # this will lead to a rejection of the bid downstream automatically
+        elif current_bid < player.current_cash and agent_helper_functions.will_property_complete_set(player,asset,current_gameboard):
+                # We are prepared to bid more than the price of the asset only if it doesn't result in insolvency, and
+                    # if we can get a monopoly this way
+            return current_bid+(player.current_cash-current_bid)/4
         else:
-            rl_logger.info(f"Player {player.player_name} decided NOT to buy property at position {property_positions} for ${price}")
-            return False
-    
-    def make_bid(self, player, current_gameboard, property_position, current_bid):
-        rl_logger.debug(f"Player {player.player_name} deciding on bid for property at position {property_position}, current bid: ${current_bid}")
-        return 0
+            return 0 # no reason to bid
     
     def handle_negative_cash_balance(self, player, current_gameboard):
-        rl_logger.info(f"Player {player.player_name} handling negative cash balance: ${player.current_cash}")
-        actions = []
-        for asset in player.assets:
-            if not asset.is_mortgaged:
-                actions.append(('mortgage', asset))
-                rl_logger.debug(f"Player {player.player_name} mortgaging asset: {asset.name}")
+        """
+        You have a negative cash balance at the end of your move (i.e. your post-roll phase is over) and you must handle
+        this issue before we move to the next player's pre-roll. If you do not succeed in restoring your cash balance to
+        0 or positive, bankruptcy proceeds will begin and you will lost the game.
+        The background agent tries a number of things to get itself out of a financial hole. First, it checks whether
+        mortgaging alone can save it. If not, then it begins selling unimproved properties in ascending order of price, the idea being
+        that it might as well get rid of cheap properties. This may not be the most optimal move but it is reasonable.
+        If it ends up selling all unimproved properties and is still insolvent, it starts selling improvements, followed
+        by a sale of the (now) unimproved properties.
+        :param player: A Player instance. You should expect this to be the player that is 'making' the decision (i.e. the player
+        instantiated with the functions specified by this decision agent).
+        :param current_gameboard: A dict. The global data structure representing the current game board.
+        :return: -1 if you do not try to address your negative cash balance, or 1 if you tried and believed you succeeded.
+        Note that even if you do return 1, we will check to see whether you have non-negative cash balance. The rule of thumb
+        is to return 1 as long as you 'try', or -1 if you don't try (in which case you will be declared bankrupt and lose the game)
+        """
+        if player.current_cash >= 0:   # prelim check to see if player has negative cash balance
+            return (None, flag_config_dict['successful_action'])
+
+        mortgage_potentials = list()
+        max_sum = 0
+        sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+        for a in sorted_player_assets_list:
+            if a.is_mortgaged:
+                continue
+            elif a.loc_class=='real_estate' and (a.num_houses>0 or a.num_hotels>0):
+                continue
+            else:
+                mortgage_potentials.append((a,a.mortgage))
+                max_sum += a.mortgage
+        if mortgage_potentials and max_sum+player.current_cash >= 0: # if the second condition is not met, no point in mortgaging
+            sorted_potentials = sorted(mortgage_potentials, key=lambda x: x[1])  # sort by mortgage in ascending order
+            for p in sorted_potentials:
                 if player.current_cash >= 0:
-                    break
-        
-        rl_logger.info(f"Player {player.player_name} taking {len(actions)} actions to handle negative cash balance")
-        return actions
+                    return (None, flag_config_dict['successful_action']) # we're done
+
+                params = dict()
+                params['player'] = player.player_name
+                params['asset'] = p[0].name
+                params['current_gameboard'] = "current_gameboard"
+                logger.debug(player.player_name+ ': I am attempting to mortgage property '+ params['asset'])
+                player.agent._agent_memory['previous_action'] = "mortgage_property"
+                return ("mortgage_property", params)
+
+
+        # if we got here, it means we're still in trouble. Next move is to sell unimproved properties. We don't check if
+        # the total will cover our debts, since we're desperate at this point.
+
+        # following sale potentials doesnot include properties from monopolized color groups
+        sale_potentials = list()
+        sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+        for a in sorted_player_assets_list:
+            if a.color in player.full_color_sets_possessed:
+                continue
+            elif a.is_mortgaged:
+                sale_potentials.append((a, (a.price*current_gameboard['bank'].property_sell_percentage)-((1+current_gameboard['bank'].mortgage_percentage)*a.mortgage)))
+            elif a.loc_class=='real_estate' and (a.num_houses>0 or a.num_hotels>0):
+                continue
+            else:
+                sale_potentials.append((a,a.price*current_gameboard['bank'].property_sell_percentage))
+
+        if sale_potentials: # if the second condition is not met, no point in mortgaging
+            sorted_potentials = sorted(sale_potentials, key=lambda x: x[1])  # sort by mortgage in ascending order
+            for p in sorted_potentials:
+                if player.current_cash >= 0:
+                    return (None, flag_config_dict['successful_action']) # we're done
+
+                params = dict()
+                params['player'] = player.player_name
+                params['asset'] = p[0].name
+                params['current_gameboard'] = "current_gameboard"
+                logger.debug(player.player_name + ': I am attempting to sell property '+ p[0].name + ' to the bank')
+                player.agent._agent_memory['previous_action'] = "sell_property"
+                return ("sell_property", params)
+
+
+        # if selling properties from non monopolized color groups doesnot relieve the player from debt, then only we start thinking about giving up monopolized groups.
+        # If we come across a unimproved property which belongs to a monopoly, we still have to loop through the other properties from the same color group and
+        # sell the houses and hotels first because we cannot sell this property when the color group has improved properties
+        # We first check if selling houses and hotels one by one on the other improved properties of the same color group relieves the player of his debt. If it does
+        # then we return without selling the current property else we sell the property and the player loses monopoly of that color group.
+        sale_potentials = list()
+        sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+        for a in sorted_player_assets_list:
+            if a.is_mortgaged:
+                sale_potentials.append((a, (a.price*current_gameboard['bank'].property_sell_percentage)-((1+current_gameboard['bank'].mortgage_percentage)*a.mortgage)))
+            elif a.loc_class=='real_estate' and (a.num_houses>0 or a.num_hotels>0):
+                continue
+            else:
+                sale_potentials.append((a,a.price*current_gameboard['bank'].property_sell_percentage))
+
+        if sale_potentials:
+            sorted_potentials = sorted(sale_potentials, key=lambda x: x[1])  # sort by sell value in ascending order
+            for p in sorted_potentials:
+                if player.current_cash >= 0:
+                    return (None, flag_config_dict['successful_action']) # we're done
+
+                sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+                for prop in sorted_player_assets_list:
+                    if prop!=p[0] and prop.color==p[0].color and p[0].color in player.full_color_sets_possessed:
+                        if hasattr(prop, 'num_hotels'):  # add by Peter, for composite novelty
+                            if prop.num_hotels>0:
+                                if player.current_cash >= 0:
+                                    return (None, flag_config_dict['successful_action'])
+                                params = dict()
+                                params['player'] = player.player_name
+                                params['asset'] = prop.name
+                                params['current_gameboard'] = "current_gameboard"
+                                params['sell_house'] = False
+                                params['sell_hotel'] = True
+                                logger.debug(player.player_name+ ': I am attempting to sell hotel on '+ prop.name + ' to the bank')
+                                player.agent._agent_memory['previous_action'] = "sell_house_hotel"
+                                return ("sell_house_hotel", params)
+
+                            elif prop.num_houses>0:
+                                if player.current_cash >= 0:
+                                    return (None, flag_config_dict['successful_action'])
+                                params = dict()
+                                params['player'] = player.player_name
+                                params['asset'] = prop.name
+                                params['current_gameboard'] = "current_gameboard"
+                                params['sell_house'] = True
+                                params['sell_hotel'] = False
+                                logger.debug(player.player_name+ ': I am attempting to sell house on '+ prop.name + ' to the bank')
+                                player.agent._agent_memory['previous_action'] = "sell_house_hotel"
+                                return ("sell_house_hotel", params)
+                            else:
+                                continue
+
+                params = dict()
+                params['player'] = player.player_name
+                params['asset'] = p[0].name
+                params['current_gameboard'] = "current_gameboard"
+                logger.debug(player.player_name + ': I am attempting to sell property '+ p[0].name + ' to the bank')
+                player.agent._agent_memory['previous_action'] = "sell_property"
+                return ("sell_property", params)
+
+
+
+        #we reach here if the player still hasnot cleared his debt. The above loop has now resulted in some more non monopolized properties.
+        #Hence we have to go through the process of looping through these properties once again to decide on the potential properties that can be mortgaged or sold.
+
+        mortgage_potentials = list()
+        max_sum = 0
+        sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+        for a in sorted_player_assets_list:
+            if a.is_mortgaged:
+                continue
+            elif a.loc_class=='real_estate' and (a.num_houses>0 or a.num_hotels>0):
+                continue
+            else:
+                mortgage_potentials.append((a,a.mortgage))
+                max_sum += a.mortgage
+        if mortgage_potentials and max_sum+player.current_cash >= 0: # if the second condition is not met, no point in mortgaging
+            sorted_potentials = sorted(mortgage_potentials, key=lambda x: x[1])  # sort by mortgage in ascending order
+            for p in sorted_potentials:
+                if player.current_cash >= 0:
+                    return (None, flag_config_dict['successful_action']) # we're done
+
+                params = dict()
+                params['player'] = player.player_name
+                params['asset'] = p[0].name
+                params['current_gameboard'] = "current_gameboard"
+                logger.debug(player.player_name+ ': I am attempting to mortgage property '+ params['asset'])
+                player.agent._agent_memory['previous_action'] = "mortgage_property"
+                return ("mortgage_property", params)
+
+        # following sale potentials loops through the properties that have become unmonopolized due to the above loops and
+        # doesnot include properties from monopolized color groups
+        sale_potentials = list()
+        sorted_player_assets_list = self._set_to_sorted_list_assets(player.assets)
+        for a in sorted_player_assets_list:
+            if a.color in player.full_color_sets_possessed:
+                continue
+            elif a.is_mortgaged:
+                sale_potentials.append((a, (a.price*current_gameboard['bank'].property_sell_percentage)-((1+current_gameboard['bank'].mortgage_percentage)*a.mortgage)))
+            elif a.loc_class=='real_estate' and (a.num_houses>0 or a.num_hotels>0):
+                continue
+            else:
+                sale_potentials.append((a, a.price*current_gameboard['bank'].property_sell_percentage))
+
+        if sale_potentials: # if the second condition is not met, no point in mortgaging
+            sorted_potentials = sorted(sale_potentials, key=lambda x: x[1])  # sort by mortgage in ascending order
+            for p in sorted_potentials:
+                if player.current_cash >= 0:
+                    return (None, flag_config_dict['successful_action']) # we're done
+
+                params = dict()
+                params['player'] = player.player_name
+                params['asset'] = p[0].name
+                params['current_gameboard'] = "current_gameboard"
+                logger.debug(player.player_name + ': I am attempting to sell property '+ p[0].name + ' to the bank')
+                player.agent._agent_memory['previous_action'] = "sell_property"
+                return ("sell_property", params)
+
+        count = 0
+        # if we're STILL not done, then the only option is to start selling houses and hotels from the remaining improved monopolized properties, if we have 'em
+        while (player.num_total_houses > 0 or player.num_total_hotels > 0) and count <3: # often times, a sale may not succeed due to uniformity requirements. We keep trying till everything is sold,
+            # or cash balance turns non-negative.
+            count += 1 # there is a slim chance that it is impossible to sell an improvement unless the player does something first (e.g., replace 4 houses with a hotel).
+            # The count ensures we terminate at some point, regardless.
+            sorted_assets_list = self._set_to_sorted_list_assets(player.assets)
+
+            for a in sorted_assets_list:
+                if a.loc_class == 'real_estate' and a.num_houses > 0:
+                    if player.current_cash >= 0:
+                        return (None, flag_config_dict['successful_action']) # we're done
+
+                    params = dict()
+                    params['player'] = player.player_name
+                    params['asset'] = a.name
+                    params['current_gameboard'] = "current_gameboard"
+                    params['sell_house'] = True
+                    params['sell_hotel'] = False
+                    logger.debug(player.player_name+ ': I am attempting to sell house on '+ a.name + ' to the bank')
+                    player.agent._agent_memory['previous_action'] = "sell_house_hotel"
+                    return ("sell_house_hotel", params)
+
+                elif a.loc_class == 'real_estate' and a.num_hotels > 0:
+                    if player.current_cash >= 0:
+                        return (None, flag_config_dict['successful_action']) # we're done
+                    params = dict()
+                    params['player'] = player.player_name
+                    params['asset'] = a.name
+                    params['current_gameboard'] = "current_gameboard"
+                    params['sell_house'] = False
+                    params['sell_hotel'] = True
+                    logger.debug(player.player_name+ ': I am attempting to sell house on '+ a.name + ' to the bank')
+                    player.agent._agent_memory['previous_action'] = "sell_house_hotel"
+                    return ("sell_house_hotel", params)
+
+        # final straw
+        final_sale_assets = player.assets.copy()
+        sorted_player_assets_list = self._set_to_sorted_list_assets(final_sale_assets)
+        for a in sorted_player_assets_list:
+            if player.current_cash >= 0:
+                return (None, flag_config_dict['successful_action'])  # we're done
+            params = dict()
+            params['player'] = player.player_name
+            params['asset'] = a.name
+            params['current_gameboard'] = "current_gameboard"
+            logger.debug(player.player_name + ': I am attempting to sell property '+ a.name + ' to the bank')
+            player.agent._agent_memory['previous_action'] = "sell_property"
+            return ("sell_property", params)
+
+        return (None, flag_config_dict['successful_action']) # if we didn't succeed in establishing solvency, it will get caught by the simulator. Since we tried, we return 1.
+    def _set_to_sorted_list_mortgaged_assets(self,player_mortgaged_assets):
+        player_m_assets_list = list()
+        player_m_assets_dict = dict()
+        for item in player_mortgaged_assets:
+            player_m_assets_dict[item.name] = item
+        for sorted_key in sorted(player_m_assets_dict):
+            player_m_assets_list.append(player_m_assets_dict[sorted_key])
+        return player_m_assets_list
+
+
+    def _set_to_sorted_list_assets(self,player_assets):
+        player_assets_list = list()
+        player_assets_dict = dict()
+        for item in player_assets:
+            player_assets_dict[item.name] = item
+        for sorted_key in sorted(player_assets_dict):
+            player_assets_list.append(player_assets_dict[sorted_key])
+        return player_assets_list
     
     def _make_decision(self, player, current_gameboard, game_phase):
         """
@@ -269,6 +575,8 @@ class DDQNDecisionAgent(Agent):
             # Validate and convert asset parameters for property-related actions
             if action_name == "sell_property":
                 parameters = action_validator.validate_sell_property(parameters, current_gameboard, rl_logger)
+            elif action_name =="make_sell_property_offer":
+                parameters = action_validator.validate_make_sell_property_offer(parameters, current_gameboard, rl_logger)
             elif action_name == "sell_house_hotel":
                 parameters = action_validator.validate_sell_house_hotel_asset(parameters, current_gameboard, rl_logger)
             elif action_name in ["improve_property", "reverse_improve_property"]:
@@ -383,6 +691,7 @@ ddqn_agent_instance = DDQNDecisionAgent()
 
 def handle_negative_cash_balance(player, current_gameboard):
     if global_ddqn_agent:
+        rl_logger.info(f"handle negative cash balance called")
         return global_ddqn_agent.handle_negative_cash_balance(player, current_gameboard)
     return []
 
@@ -401,14 +710,18 @@ def make_post_roll_move(player, current_gameboard, allowable_moves, code):
         return global_ddqn_agent.make_post_roll_move(player, current_gameboard, allowable_moves, code)
     return action_choices.concluded_actions
 
-def make_buy_property_decision(player, current_gameboard, property_positions, price):
+def make_buy_property_decision(player, current_gameboard, asset):
     if global_ddqn_agent:
-        return global_ddqn_agent.make_buy_property_decision(player, current_gameboard, property_positions, price)
+        rl_logger.info(f"make buy property decision called")
+        decision=global_ddqn_agent.make_buy_property_decision(player, current_gameboard, asset)
+        rl_logger.info(f"make buy property decision finally is {decision}")
+        return decision
     return False
 
-def make_bid(player, current_gameboard, property_position, current_bid):
+def make_bid(player, current_gameboard, asset, current_bid):
     if global_ddqn_agent:
-        return global_ddqn_agent.make_bid(player, current_gameboard, property_position, current_bid)
+        rl_logger.info(f"make bid called")
+        return global_ddqn_agent.make_bid(player, current_gameboard, asset, current_bid)
     return 0
 
 def _build_decision_agent_methods_dict():

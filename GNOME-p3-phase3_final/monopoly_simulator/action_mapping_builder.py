@@ -1012,7 +1012,30 @@ def check_buy_property_validity(mapping_entry: Dict, current_gameboard: Dict, ga
     
     logger.debug(f"Player {player.player_name} does not have the option to buy property")
     return False
-def check_trade_offer_validity(mapping_entry: Dict, current_gameboard: Dict, game_phase: str) -> bool:
+
+def convert_cash_value(value):
+    """
+    Converts a cash amount value into a numeric type.
+    If the value is numeric, it is simply returned as a float.
+    If the value is a recognized string (e.g., 'below_market', 'at_market', 'above_market'),
+    then it is mapped to a numeric value. Adjust these mappings as needed.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        mapping = {
+            "below_market": 0.75,  # For example, offers below market are treated as 0.0
+            "at_market": 1.0,      # At market could be interpreted as a full market offer (modify as necessary)
+            "above_market": 1.25    # Above market might imply a premium (modify as necessary)
+        }
+        try:
+            return float(mapping[value])
+        except KeyError as e:
+            raise ValueError(f"Unrecognized cash value string: {value}") from e
+    raise TypeError(f"Invalid type for cash value: {type(value)}")
+
+
+def check_trade_offer_validity(mapping_entry: dict, current_gameboard: dict, game_phase: str) -> bool:
     """
     Checks if a trade offer action would be valid without actually executing it.
     
@@ -1021,12 +1044,12 @@ def check_trade_offer_validity(mapping_entry: Dict, current_gameboard: Dict, gam
     It also considers the current game phase to ensure the action is allowed in that phase.
     
     Args:
-        mapping_entry: The action mapping entry containing the action and parameters
-        current_gameboard: The current state of the game board
-        game_phase: The current phase of the game ("pre_roll", "post_roll", or "out_of_turn")
-        
+        mapping_entry: The action mapping entry containing the action and parameters.
+        current_gameboard: The current state of the game board.
+        game_phase: The current phase of the game ("pre_roll", "post_roll", or "out_of_turn").
+            
     Returns:
-        bool: True if the trade offer would be valid, False otherwise
+        bool: True if the trade offer would be valid, False otherwise.
     """
     try:
         # First check if trade offers are allowed in the current game phase
@@ -1076,10 +1099,17 @@ def check_trade_offer_validity(mapping_entry: Dict, current_gameboard: Dict, gam
             logger.debug(f"Player {to_player_name} already has a trade offer outstanding")
             return False
         
+        # Convert cash_offered and cash_wanted to numeric types.
+        cash_offered_raw = offer.get('cash_offered', 0)
+        cash_wanted_raw = offer.get('cash_wanted', 0)
+        try:
+            cash_offered = int(convert_cash_value(cash_offered_raw))
+            cash_wanted = int(convert_cash_value(cash_wanted_raw))
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Error converting cash amounts: cash_offered='{cash_offered_raw}', cash_wanted='{cash_wanted_raw}'. Error: {e}")
+            return False
+
         # Check if cash offered or wanted is negative
-        cash_offered = offer.get('cash_offered', 0)
-        cash_wanted = offer.get('cash_wanted', 0)
-        
         if cash_offered < 0 or cash_wanted < 0:
             logger.debug("Cash offered or cash wanted amounts cannot be negative")
             return False
@@ -1176,6 +1206,7 @@ def check_trade_offer_validity(mapping_entry: Dict, current_gameboard: Dict, gam
     except Exception as e:
         logger.error(f"Error in check_trade_offer_validity: {str(e)}")
         return False
+
 
 def create_action_mask(player, current_gameboard, game_phase: str) -> np.ndarray:
     """

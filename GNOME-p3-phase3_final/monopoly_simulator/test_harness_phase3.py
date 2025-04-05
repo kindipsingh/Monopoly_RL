@@ -81,8 +81,14 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
                                                                             agent_combination_1[i][2],
                                                                             agent_combination_1[i][3],
                                                                             novelty_info=novelty_info)
-                except:
-                    victor = 'crush'
+                    if victor is None:
+                       print("Game completed but no winner was determined")
+                       victor = 'no_winner'             
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    print(f"Game crashed with error: {e}")
+                    victor = 'crush'                
 
             winners.append(victor)
 
@@ -133,6 +139,8 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
                                                                                 inject_novelty_function=getattr(sys.modules[__name__], nov),
                                                                                 novelty_name = novelty_name)
                 except:
+                    import traceback
+                    traceback.print_exc()
                     victor = 'crush'
 
 
@@ -154,6 +162,7 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
         winners_dict['player_3'] = 0
         winners_dict['player_4'] = 0
         winners_dict['crush'] = 0
+        winners_dict['no_winner'] = 0
 
         new_winners_dict = dict()
         new_winners_dict['player_1'] = 0
@@ -161,6 +170,7 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
         new_winners_dict['player_3'] = 0
         new_winners_dict['player_4'] = 0
         new_winners_dict['crush'] = 0
+        new_winners_dict['no_winner'] = 0
 
         for win in winners:
             winners_dict[win] += 1
@@ -168,8 +178,8 @@ def play_tournament_with_novelty_v3(tournament_log_folder=None, nov=None, meta_s
             new_winners_dict[win] += 1
 
         for k in winners_dict.keys():
-            winners_dict[k] = winners_dict[k]/novelty_index
-            new_winners_dict[k] = new_winners_dict[k]/(num_games - novelty_index)
+            winners_dict[k] = winners_dict[k]/novelty_index if novelty_index > 0 else 0
+            new_winners_dict[k] = new_winners_dict[k]/(num_games - novelty_index) if (num_games - novelty_index) > 0 else 0
         print("Pre-Novelty Player Win Ratio: ")
         print(winners_dict)
         print("Post-Novelty Player Win Ratio: ")

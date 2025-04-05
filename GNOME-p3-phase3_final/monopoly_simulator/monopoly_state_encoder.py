@@ -199,7 +199,10 @@ class MonopolyStateEncoder:
             base_idx = p_idx * 4  # 4 features per player
             
             # 1. Current location (normalized by board size)
-            state[base_idx] = player.current_position / 40
+            if player.current_position is None:
+                state[base_idx] = 0  # Default to 0 (GO position) or another appropriate value
+            else:
+                state[base_idx] = player.current_position / 40
             
             # 2. Cash amount (log-normalized)
             state[base_idx + 1] = np.log(max(1, player.current_cash)) / 10
@@ -224,7 +227,8 @@ class MonopolyStateEncoder:
                 # 1. Owner representation (4-dim one-hot)
                 if location.owned_by is not None:
                     for p_idx, player in enumerate(players):
-                        if location in player.assets:
+                        # Check if player.assets is not None before checking if location is in assets
+                        if player.assets is not None and location in player.assets:
                             state[base_idx + p_idx] = 1
                             break
                 
@@ -258,11 +262,16 @@ class MonopolyStateEncoder:
         # Find property owner
         owner = None
         for player in players:
-            if property in player.assets:
+            # Check if player.assets is not None before checking if property is in assets
+            if player.assets is not None and property in player.assets:
                 owner = player
                 break
                 
         if owner is None:
+            return False
+            
+        # Check if full_color_sets_possessed is None before checking if color is in it
+        if owner.full_color_sets_possessed is None:
             return False
             
         # Check if color is in player's full_color_sets_possessed

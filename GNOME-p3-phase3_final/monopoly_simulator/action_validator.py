@@ -78,6 +78,84 @@ def convert_cash_values(offer, current_gameboard, rl_logger):
     offer["cash_wanted"] = 0
     return offer
 
+def validate_make_sell_property_offer(parameters, current_gameboard, rl_logger):
+    """
+    Validates parameters for a make_sell_property_offer action.
+
+    Expected parameters:
+      - asset (str or property object): The property name (if string) representing the offered property.
+      - to_player (object): The player object to whom the offer is being made. Must have a 'player_name' attribute.
+      - price (numeric): The asking price for the asset.
+
+    This function converts the asset from a string to the corresponding property object from current_gameboard.
+    It also validates that the price is numeric and non-negative, and that to_player appears valid.
+
+    Args:
+        parameters (dict): The offer parameters.
+        current_gameboard (dict): The current gameboard containing available property locations.
+        rl_logger: Logger instance for logging errors and debug messages.
+
+    Returns:
+        dict: Updated parameters with converted 'asset' and numeric 'price'.
+
+    Raises:
+        ValueError: If a required parameter is missing or invalid.
+    """
+    # Check for required keys.
+    for key in ["asset", "to_player", "price"]:
+        if key not in parameters:
+            rl_logger.error(f"validate_make_sell_property_offer failed: missing required key '{key}'")
+            raise ValueError(f"Missing required parameter: {key}")
+
+    # Validate and convert asset.
+    if isinstance(parameters["asset"], str):
+        asset_name = parameters["asset"]
+        rl_logger.debug(f"validate_make_sell_property_offer: Converting asset '{asset_name}'")
+        # Retrieve locations from current_gameboard.
+        locations_field = current_gameboard.get("locations", {})
+        if isinstance(locations_field, dict) and "location_states" in locations_field:
+            locations_list = locations_field.get("location_states", [])
+        elif isinstance(locations_field, list):
+            locations_list = locations_field
+        else:
+            locations_list = []
+        # Fallback to location_sequence if necessary.
+        if not locations_list:
+            locations_list = current_gameboard.get("location_sequence", [])
+        asset_obj = next(
+            (
+                loc for loc in locations_list
+                if ((loc.get("name", "") if isinstance(loc, dict) else getattr(loc, "name", "")).lower() == asset_name.lower())
+            ),
+            None
+        )
+        if asset_obj is None:
+            rl_logger.error(f"validate_make_sell_property_offer: Asset '{asset_name}' not found in current gameboard.")
+            raise ValueError(f"Asset '{asset_name}' not found in current gameboard.")
+        parameters["asset"] = asset_obj
+        rl_logger.debug(f"validate_make_sell_property_offer: Asset converted to {asset_obj}.")
+    # Otherwise, asset is assumed to already be a property object.
+
+    # Validate price: ensure numeric value and non-negative.
+    price = parameters["price"]
+    try:
+        numeric_price = int(float(price))
+        if numeric_price < 0:
+            rl_logger.error("validate_make_sell_property_offer: Price must be non-negative.")
+            raise ValueError("Price must be non-negative.")
+        parameters["price"] = numeric_price
+    except (ValueError, TypeError) as e:
+        rl_logger.error(f"validate_make_sell_property_offer: Invalid price value '{price}'. Error: {e}")
+        raise ValueError(f"Invalid price value: {price}")
+
+    # Validate the to_player parameter.
+    to_player = parameters["to_player"]
+    if not hasattr(to_player, "player_name"):
+        rl_logger.error("validate_make_sell_property_offer: 'to_player' parameter is invalid; missing player_name attribute.")
+        raise ValueError("Invalid to_player parameter; missing player_name attribute.")
+
+    return parameters
+
 def convert_offer_properties(offer, current_gameboard, rl_logger):
     """
     Convert property names in property_set_offered and property_set_wanted to property objects

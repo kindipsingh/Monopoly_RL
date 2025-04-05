@@ -207,6 +207,7 @@ def play_tournament_with_novelty_v3(agent_combination_1, agent_combination_2, to
         winners_dict['player_3'] = 0
         winners_dict['player_4'] = 0
         winners_dict['crush'] = 0
+        winners_dict['no_winner'] = 0 
 
         new_winners_dict = dict()
         new_winners_dict['player_1'] = 0
@@ -214,6 +215,7 @@ def play_tournament_with_novelty_v3(agent_combination_1, agent_combination_2, to
         new_winners_dict['player_3'] = 0
         new_winners_dict['player_4'] = 0
         new_winners_dict['crush'] = 0
+        new_winners_dict['no_winner'] = 0
 
         for win in winners:
             winners_dict[win] += 1
@@ -221,8 +223,8 @@ def play_tournament_with_novelty_v3(agent_combination_1, agent_combination_2, to
             new_winners_dict[win] += 1
 
         for k in winners_dict.keys():
-            winners_dict[k] = winners_dict[k] / novelty_index
-            new_winners_dict[k] = new_winners_dict[k] / (num_games - novelty_index)
+            winners_dict[k] = winners_dict[k]/novelty_index if novelty_index > 0 else 0
+            new_winners_dict[k] = new_winners_dict[k]/(num_games - novelty_index) if (num_games - novelty_index) > 0 else 0
         print("Pre-Novelty Player Win Ratio: ")
         print(winners_dict)
         print("Post-Novelty Player Win Ratio: ")
