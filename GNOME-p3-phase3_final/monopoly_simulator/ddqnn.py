@@ -41,13 +41,3 @@ class DDQNNetwork(nn.Module):
         q_values = self.out(x)
         return q_values
 
-if __name__ == "__main__":
-    # Testing the DDQN network with a dummy input
-    batch_size = 2
-    state_dim = 240
-    action_dim = 2950
-
-    dummy_state = torch.randn(batch_size, state_dim)
-    model = DDQNNetwork(state_dim=state_dim, action_dim=action_dim)
-    output = model(dummy_state)
-    print("Output shape:", output.shape)  # Expected shape: (batch_size, action_dim)

@@ -15,6 +15,8 @@ from monopoly_simulator import action_validator
 from monopoly_simulator.flag_config import flag_config_dict
 from monopoly_simulator.flag_config import flag_config_dict
 from monopoly_simulator import agent_helper_functions_v2 as agent_helper_functions
+import pickle
+import os
 
 ##############################################################
 # Logging configuration
@@ -114,10 +116,16 @@ class DDQNDecisionAgent(Agent):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         rl_logger.info(f"Using device: {self.device}")
         
+        replay_buffer_path = os.path.join("GNOME-p3-phase3_final", "monopoly_simulator", "replay_buffer.pkl")
+        self.load_replay_buffer(replay_buffer_path)
+        
         global global_ddqn_agent
         global_ddqn_agent = self
         
         rl_logger.info(f"{self.name} initialization complete")
+
+
+
     
     def make_pre_roll_move(self, player, current_gameboard, allowable_moves, code):
         rl_logger.debug(f"Player {player.player_name} making pre-roll move")
@@ -603,31 +611,99 @@ class DDQNDecisionAgent(Agent):
                 return ("skip_turn", {})
 
     def _calculate_reward(self, player, current_gameboard):
+        """
+        Calculate a comprehensive reward based on the player's current state in the game.
+        This function evaluates multiple aspects of the player's performance:
+        - Net worth (cash + property values)
+        - Property ownership and monopolies
+        - Cash balance
+        - Game state (winning/losing)
+        
+        Parameters:
+            player: A Player instance representing the current player
+            current_gameboard: A dict representing the current game board state
+            
+        Returns:
+            float: The calculated reward value
+        """
+        # Base reward: Net worth calculation
         net_worth = player.current_cash
+        property_value = 0
+        
+        # Calculate property values including houses and hotels
         for asset in player.assets:
-            net_worth += asset.price
+            property_value += asset.price
             if hasattr(asset, 'num_houses'):
-                net_worth += asset.num_houses * asset.house_price
+                property_value += asset.num_houses * asset.house_price
             if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
-                net_worth += asset.num_hotels * asset.house_price * 5
+                property_value += asset.num_hotels * asset.house_price * 5
         
-        reward = net_worth / 10000.0
+        # Calculate total net worth
+        total_net_worth = net_worth + property_value
         
+        # Base reward normalized by a factor to keep it manageable
+        base_reward = total_net_worth / 10000.0
+        
+        # Additional rewards for strategic achievements
+        strategic_reward = 0.0
+        
+        # Reward for monopolies (owning all properties of a color group)
+        monopoly_reward = len(player.full_color_sets_possessed) * 5.0
+        strategic_reward += monopoly_reward
+        
+        # Reward for property development (houses and hotels)
+        development_reward = 0.0
+        for asset in player.assets:
+            if hasattr(asset, 'num_houses') and asset.num_houses > 0:
+                development_reward += asset.num_houses * 0.5
+            if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
+                development_reward += asset.num_hotels * 3.0
+        strategic_reward += development_reward
+        
+        # Reward for maintaining cash reserves (liquidity)
+        liquidity_reward = 0.0
+        if player.current_cash > 500:
+            liquidity_reward = min(player.current_cash / 5000.0, 5.0)  # Cap at 5.0
+        strategic_reward += liquidity_reward
+        
+        # Penalty for mortgaged properties
+        mortgage_penalty = 0.0
+        for asset in player.assets:
+            if asset.is_mortgaged:
+                mortgage_penalty += 0.5
+        strategic_reward -= mortgage_penalty
+        
+        # Game state rewards/penalties
+        game_state_reward = 0.0
+        
+        # Major reward for winning
         if 'winner' in current_gameboard and current_gameboard['winner'] == player.player_name:
-            reward += 100
+            game_state_reward += 10
             rl_logger.info(f"Player {player.player_name} WON! Adding winning bonus of 100 to reward")
         
+        # Major penalty for losing
         if player.status == 'lost':
-            reward -= 50
+            game_state_reward -= 10
             rl_logger.info(f"Player {player.player_name} LOST! Adding losing penalty of -50 to reward")
         
+        # Calculate final reward
+        final_reward = base_reward + strategic_reward + game_state_reward
+        
+        # Log detailed reward breakdown
         rl_logger.info(f"Reward calculation for {player.player_name}:")
         rl_logger.info(f"  Cash: ${player.current_cash}")
-        rl_logger.info(f"  Assets: ${net_worth - player.current_cash}")
-        rl_logger.info(f"  Net worth: ${net_worth}")
-        rl_logger.info(f"  Final reward: {reward}")
+        rl_logger.info(f"  Property value: ${property_value}")
+        rl_logger.info(f"  Net worth: ${total_net_worth}")
+        rl_logger.info(f"  Base reward: {base_reward:.2f}")
+        rl_logger.info(f"  Strategic reward: {strategic_reward:.2f}")
+        rl_logger.info(f"    - Monopoly reward: {monopoly_reward:.2f}")
+        rl_logger.info(f"    - Development reward: {development_reward:.2f}")
+        rl_logger.info(f"    - Liquidity reward: {liquidity_reward:.2f}")
+        rl_logger.info(f"    - Mortgage penalty: -{mortgage_penalty:.2f}")
+        rl_logger.info(f"  Game state reward: {game_state_reward:.2f}")
+        rl_logger.info(f"  Final reward: {final_reward:.2f}")
         
-        return reward
+        return final_reward
     
     def _is_episode_done(self, current_gameboard):
         if 'winner' in current_gameboard and current_gameboard['winner'] is not None:
@@ -686,6 +762,26 @@ class DDQNDecisionAgent(Agent):
         }
         rl_logger.info(f"Replay buffer stats: {stats}")
         return stats
+    
+    def save_replay_buffer(self, file_path):
+        """Persist the agent's replay buffer to disk."""
+        with open(file_path, "wb") as f:
+            pickle.dump(self.ddqn_agent.replay_buffer.buffer, f)
+        rl_logger.info(f"Replay buffer saved to {file_path}")
+
+    def load_replay_buffer(self, file_path):
+        """Load and replace the agent's replay buffer from disk if it exists."""
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                self.ddqn_agent.replay_buffer.buffer = pickle.load(f)
+            rl_logger.info(f"Replay buffer loaded from {file_path}")
+        else:
+            rl_logger.info(f"No saved replay buffer found at {file_path}")
+
+    def persist_replay_buffer(self):
+        """Helper to easily save the replay buffer at a known location."""
+        replay_buffer_path = os.path.join("GNOME-p3-phase3_final", "monopoly_simulator", "replay_buffer.pkl")
+        self.save_replay_buffer(replay_buffer_path)
 
 ddqn_agent_instance = DDQNDecisionAgent()
 

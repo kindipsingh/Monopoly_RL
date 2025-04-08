@@ -1,17 +1,16 @@
+
 import os
 import sys
 import random
+import time
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from collections import deque
 
-# Import your DDQN network and state encoder.
-# Make sure these paths are correct in your workspace.
-from ddqnn import DDQNNetwork
-from monopoly_simulator.monopoly_state_encoder import MonopolyStateEncoder, create_initial_state
-
+# Import DDQN network and state encoder.
+from monopoly_simulator.ddqnn import DDQNNetwork
 # -----------------------------
 # Replay Buffer Implementation
 # -----------------------------
@@ -56,29 +55,13 @@ class DDQNAgent:
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.replay_buffer = ReplayBuffer(replay_capacity)
         
-        # Epsilon parameters for epsilon-greedy
+        # Epsilon parameters for epsilon-greedy action selection.
         self.epsilon = 1.0
         self.epsilon_min = 0.1
         self.epsilon_decay = 0.995
         
         self.steps_done = 0
-    
-    # def select_action(self, state):
-    #     """
-    #     Select an action using epsilon-greedy.
-    #     Assumes state is a torch.Tensor of shape (1, state_dim).
-    #     In this example, we choose the action index with max Q-value.
-    #     In practice, you might use action masking using your ActionEncoder.
-    #     """
-    #     self.steps_done += 1
-    #     if random.random() < self.epsilon:
-    #         # Random action (note: in a real simulator, select only from valid actions)
-    #         return random.randrange(self.action_dim)
-    #     else:
-    #         with torch.no_grad():
-    #             q_values = self.policy_net(state.to(self.device))
-    #             # Use torch.argmax for index (action) selection.
-    #             return q_values.argmax(dim=1).item()
+
     def select_action(self, state):
         """
         Select an action using epsilon-greedy, restricted to action indices between 2268 and 2922.
@@ -86,7 +69,7 @@ class DDQNAgent:
         """
         self.steps_done += 1
         lower_bound = 2268
-        upper_bound = 2922  # upper_bound is exclusive in random.randrange
+        upper_bound = 2922  # upper_bound is exclusive
         
         if random.random() < self.epsilon:
             # Random action selected from the restricted range.
@@ -119,9 +102,7 @@ class DDQNAgent:
         current_q = self.policy_net(states).gather(1, actions)
         
         # Compute next Q values using Double DQN:
-        # 1. Select best action from policy network
         next_actions = self.policy_net(next_states).argmax(dim=1, keepdim=True)
-        # 2. Evaluate with target network
         next_q = self.target_net(next_states).gather(1, next_actions)
         
         # Compute target Q values:
@@ -145,76 +126,37 @@ class DDQNAgent:
         """Copy the policy network parameters to the target network."""
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
+
 # -----------------------------
-# Dummy Environment
+# Training Loop using Replay Buffer
 # -----------------------------
-class DummyMonopolyEnv:
+def train_from_replay_buffer(agent, train_steps=1000, update_target_every=500):
     """
-    This dummy environment uses the initial state from your MonopolyStateEncoder.
-    Replace step() with your actual environment logic.
-    """
-    def __init__(self):
-        self.encoder = MonopolyStateEncoder()
-        self.state = create_initial_state().squeeze().numpy()  # 240-dim vector
-
-    def reset(self):
-        self.state = create_initial_state().squeeze().numpy()
-        return self.state
-
-    def step(self, action):
-        """
-        For demonstration, simulate:
-         - Next state as a small random perturbation,
-         - Reward as a random float,
-         - done flag with a small probability.
-        In your actual environment, use your game simulation logic.
-        """
-        next_state = self.state + np.random.normal(0, 0.01, size=self.state.shape)
-        reward = np.random.rand()  # dummy reward between 0 and 1
-        done = np.random.rand() < 0.05  # 5% chance episode ends at each step
-        self.state = next_state
-        return next_state, reward, done
-
-# -----------------------------
-# Training Loop
-# -----------------------------
-def train_ddqn(num_episodes=1000, max_steps_per_episode=200):
-    env = DummyMonopolyEnv()
-    agent = DDQNAgent()
-    update_counter = 0
+    Train the DDQN agent solely using experiences from its replay buffer.
+    Assumes that the replay buffer has been pre-populated by game play.
     
-    for episode in range(1, num_episodes + 1):
-        state = env.reset()
-        episode_loss = 0
-        for t in range(max_steps_per_episode):
-            # Convert state to tensor shape (1, state_dim)
-            state_tensor = torch.FloatTensor(state).unsqueeze(0)
-            action = agent.select_action(state_tensor)
-            
-            # Interact with the environment
-            next_state, reward, done = env.step(action)
-            
-            # Save transition in replay buffer
-            agent.replay_buffer.push(state, action, reward, next_state, done)
-            
-            # Optimize model after each step
-            loss = agent.optimize_model()
-            if loss is not None:
-                episode_loss += loss
-                update_counter += 1
-            
-            state = next_state
-            if done:
-                break
-        
-        # Update target network every target_update_freq episodes
-        if episode % agent.target_update_freq == 0:
+    Parameters:
+      - agent: the DDQNAgent instance with a populated replay buffer
+      - train_steps: total number of training steps to perform
+      - update_target_every: update the target network every `update_target_every` steps
+    """
+    for step in range(1, train_steps + 1):
+        loss = agent.optimize_model()
+        if loss is not None:
+            print(f"Train step {step}: Loss = {loss:.6f}")
+        if step % update_target_every == 0:
             agent.update_target_network()
-        
-        avg_loss = episode_loss / max(1, update_counter)
-        print(f"Episode {episode}: steps={t+1}, avg_loss={avg_loss:.6f}, epsilon={agent.epsilon:.4f}")
-        update_counter = 0  # reset update counter per episode
+            print(f"Train step {step}: Target network updated.")
 
 if __name__ == "__main__":
-    # Start training
-    train_ddqn(num_episodes=1000)
+    print("Starting DDQN agent training from replay buffer...")
+    # Create an agent instance; its replay buffer should be filled externally.
+    agent = DDQNAgent()
+    # Here one would normally load the pre-populated replay buffer,
+    # for example from a file or as accumulated during game play.
+    # train_from_replay_buffer uses the experiences already in agent.replay_buffer.
+    train_from_replay_buffer(agent, train_steps=1000, update_target_every=500)
+    # Optionally, save the final trained model.
+    final_model_path = os.path.join("GNOME-p3-phase3_final", "monopoly_simulator", "ddqn_decision_agent_final.pth")
+    torch.save(agent.policy_net.state_dict(), final_model_path)
+    print(f"Training complete. Final model saved as '{final_model_path}'.")
