@@ -542,7 +542,19 @@ class DDQNDecisionAgent(Agent):
                 # action_idx = self.ddqn_agent.select_action(state_tensor, mask_tensor)
             
             rl_logger.debug(f"Action_idx value: {action_idx}")
-            
+             # IMPORTANT: Store the action_idx in the player object and agent memory
+            player.last_action_idx = action_idx
+        
+            # Also store in agent memory if available
+            if hasattr(player, 'agent') and player.agent is not None:
+                player.agent.last_action_idx = action_idx
+                if not hasattr(player.agent, '_agent_memory') or player.agent._agent_memory is None:
+                    player.agent._agent_memory = {}
+                player.agent._agent_memory['last_action_idx'] = action_idx
+        
+            # Store in the DDQN agent for later training
+            self.last_action_idx = action_idx
+        
             # Decode the selected action
             mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
             action_name = mapping.get("action")

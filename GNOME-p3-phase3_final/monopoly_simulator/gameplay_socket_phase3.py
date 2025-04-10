@@ -44,8 +44,13 @@ encoded_logger.setLevel(logging.DEBUG)
 if encoded_logger.hasHandlers():
     encoded_logger.handlers.clear()
 
+# Create the log directory if it doesn't exist
+log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "single_tournament"))
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
 # Create a FileHandler for seed_6_encoded.log that opens in write mode.
-encoded_handler = logging.FileHandler("../single_tournament/seed_6_encoded.log", mode="w")
+encoded_handler = logging.FileHandler(os.path.join(log_dir, "seed_6_encoded.log"), mode="a")
 encoded_handler.setLevel(logging.DEBUG)
 
 # Set a formatter and add it to the handler.
@@ -72,6 +77,7 @@ def cleanup_loggers():
     for handler in encoded_logger.handlers:
         handler.flush()
         handler.close()
+    logger.debug("Loggers cleaned up successfully")
 
 def write_history_to_file(game_board, workbook):
     worksheet = workbook.add_worksheet()
@@ -110,13 +116,27 @@ def disable_history(game_elements):
 
 def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, state_logger=None):
     """
-    Simulate a game instance.
+    Simulate a game instance with replay buffer collection for the RL agent (player_3).
+    
     :param game_elements: Dictionary representing the current game state.
     :param history_log_file: Optional Excel workbook for logging game history.
     :param np_seed: Numpy seed for randomness.
     :param state_logger: Callback function for logging the current state. Expects game_elements.copy() as input.
     :return: The winner's name if the game terminates naturally.
     """
+    # Import the replay buffer module
+    from monopoly_simulator.replay_buffer_module import ReplayBuffer, calculate_reward, get_action_index, is_episode_done
+    from monopoly_simulator.ddqn_decision_agent import ddqn_agent_instance
+    
+    # Initialize replay buffer for player_3 (RL agent)
+    rl_agent_name = 'player_3'
+    replay_buffer = ReplayBuffer(capacity=100000)  # Adjust capacity as needed
+    
+    # Variables to track state and action for the RL agent
+    current_state = None
+    current_action = None
+    episode_done = False
+    
     logger.debug("size of board " + str(len(game_elements['location_sequence'])))
     np.random.seed(np_seed)
     np.random.shuffle(game_elements['players'])
@@ -141,6 +161,9 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
 
     # Initialize the action vector logger
     vector_logger = integrate_with_gameplay(game_elements, history_log_file)
+    
+    # Initialize state encoder for replay buffer
+    encoder = MonopolyStateEncoder()
 
     while num_active_players > 1 and time.time() <= timeout:
         current_player = game_elements['players'][current_player_index]
@@ -148,11 +171,18 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             current_player_index = (current_player_index + 1) % len(game_elements['players'])
             current_player = game_elements['players'][current_player_index]
         current_player.status = 'current_move'
-        encoder = MonopolyStateEncoder()
+        
+        # Encode state for logging
         encoded_state = encoder.encode_state(game_elements)
         encoded_logger.debug("\n=== Current State Vector ===\n%s", encoded_state.numpy())
-        if state_logger:  # Add this check and call
+        
+        if state_logger:
             state_logger(copy.deepcopy(game_elements))
+        
+        # Record current state for RL agent (player_3)
+        if current_player.player_name == rl_agent_name:
+            current_state = encoded_state.numpy()[0]
+            logger.debug(f"Recorded state for {rl_agent_name}")
         
         # Ensure player has allowable action methods
         if not hasattr(current_player, 'compute_allowable_pre_roll_actions'):
@@ -186,8 +216,36 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         # Pre-roll phase for current player
         skip_turn = 0
         pre_roll_code = current_player.make_pre_roll_moves(game_elements)
+        
         # After pre-roll moves, log the pre-roll action vector
         vector_logger.log_pre_roll(current_player, game_elements)
+        
+        # If this was the RL agent's turn, record the action and next state
+        if current_player.player_name == rl_agent_name and current_state is not None:
+            # Get action index from the agent using the function from replay_buffer_module
+            action_idx = get_action_index(current_player,game_elements)
+            
+            # Get next state
+            next_state = encoder.encode_state(game_elements).numpy()[0]
+            
+            # Calculate reward using the DDQN agent's reward calculation function
+            reward = calculate_reward(current_player, game_elements)
+            
+            # Check if episode is done
+            done = is_episode_done(current_player, game_elements)
+            
+            # Add experience to replay buffer
+            replay_buffer.add(current_state, action_idx, reward, next_state, done)
+            logger.debug(f"Added pre-roll experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+            
+            # Update current state for next action
+            current_state = next_state
+            
+            # If episode is done, reset current state
+            if done:
+                current_state = None
+                episode_done = True
+        
         if pre_roll_code == 2:
             skip_turn += 1
         
@@ -210,13 +268,46 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 out_of_turn_player.compute_allowable_out_of_turn_actions = default_oot_actions
                 logger.debug(f"Assigned default compute_allowable_out_of_turn_actions for {out_of_turn_player.player_name}")
             
+            # Record state for RL agent if it's their turn
+            if out_of_turn_player.player_name == rl_agent_name:
+                current_state = encoder.encode_state(game_elements).numpy()[0]
+                logger.debug(f"Recorded out-of-turn state for {rl_agent_name}")
+            
             # Log allowable out-of-turn actions for debugging
             oot_allowable = out_of_turn_player.compute_allowable_out_of_turn_actions(game_elements)
             logger.debug(f"Out-of-turn allowable actions for {out_of_turn_player.player_name}: {oot_allowable}")
             
             oot_code = out_of_turn_player.make_out_of_turn_moves(game_elements)
+            
             # Log the action vector for out-of-turn moves
             vector_logger.log_out_of_turn(out_of_turn_player, game_elements)
+            
+            # If this was the RL agent's turn, record the action and next state
+            if out_of_turn_player.player_name == rl_agent_name and current_state is not None:
+                # Get action index from the agent
+                action_idx = get_action_index(out_of_turn_player,game_elements)
+                
+                # Get next state
+                next_state = encoder.encode_state(game_elements).numpy()[0]
+                
+                # Calculate reward
+                reward = calculate_reward(out_of_turn_player, game_elements)
+                
+                # Check if episode is done
+                done = is_episode_done(out_of_turn_player, game_elements)
+                
+                # Add experience to replay buffer
+                replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                logger.debug(f"Added out-of-turn experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                
+                # Update current state for next action
+                current_state = next_state
+                
+                # If episode is done, reset current state
+                if done:
+                    current_state = None
+                    episode_done = True
+            
             if state_logger:
                 state_logger(game_elements.copy())
             if oot_code == 2:
@@ -232,8 +323,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         num_die_rolls += 1
         game_elements['current_die_total'] = sum(r)
         logger.debug('dice have come up: ' + str(r))
-        if state_logger:  # Add this check and call
-           state_logger(copy.deepcopy(game_elements))
+        if state_logger:
+            state_logger(copy.deepcopy(game_elements))
             
         # Movement and consequence phase if not in jail
         if not current_player.currently_in_jail:
@@ -250,13 +341,46 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 current_player.compute_allowable_post_roll_actions = lambda ge: ['buy_property']
                 logger.debug(f"Assigned default compute_allowable_post_roll_actions for {current_player.player_name}")
             
+            # Record state for RL agent if it's their turn
+            if current_player.player_name == rl_agent_name:
+                current_state = encoder.encode_state(game_elements).numpy()[0]
+                logger.debug(f"Recorded post-roll state for {rl_agent_name}")
+            
             # Log allowable post-roll actions for debugging
             post_roll_allowable = current_player.compute_allowable_post_roll_actions(game_elements)
             logger.debug(f"Post-roll allowable actions for {current_player.player_name}: {post_roll_allowable}")
             
             current_player.make_post_roll_moves(game_elements)
+            
             # Log the post-roll action vector after moves
             vector_logger.log_post_roll(current_player, game_elements)
+            
+            # If this was the RL agent's turn, record the action and next state
+            if current_player.player_name == rl_agent_name and current_state is not None:
+                # Get action index from the agent
+                action_idx = get_action_index(current_player,game_elements)
+                
+                # Get next state
+                next_state = encoder.encode_state(game_elements).numpy()[0]
+                
+                # Calculate reward
+                reward = calculate_reward(current_player, game_elements)
+                
+                # Check if episode is done
+                done = is_episode_done(current_player, game_elements)
+                
+                # Add experience to replay buffer
+                replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                logger.debug(f"Added post-roll experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                
+                # Update current state for next action
+                current_state = next_state
+                
+                # If episode is done, reset current state
+                if done:
+                    current_state = None
+                    episode_done = True
+            
             if state_logger:
                 state_logger(copy.deepcopy(game_elements))
         else:
@@ -272,11 +396,51 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 num_active_players -= 1
                 diagnostics.print_asset_owners(game_elements)
                 diagnostics.print_player_cash_balances(game_elements)
+                
+                # If the RL agent went bankrupt, record this as a terminal state
+                if current_player.player_name == rl_agent_name and current_state is not None:
+                    # Get next state after bankruptcy
+                    next_state = encoder.encode_state(game_elements).numpy()[0]
+                    
+                    # Large negative reward for bankruptcy
+                    reward = calculate_reward(current_player, game_elements)
+                    
+                    # This is a terminal state
+                    done = True
+                    
+                    # Add experience to replay buffer
+                    replay_buffer.add(current_state, get_action_index(current_player,game_elements), reward, next_state, done)
+                    logger.debug(f"Added bankruptcy experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                    
+                    # Reset current state
+                    current_state = None
+                    episode_done = True
+                
                 if num_active_players == 1:
                     for p in game_elements['players']:
                         if p.status != 'lost':
                             winner = p
                             p.status = 'won'
+                            game_elements['winner'] = p.player_name
+                            
+                            # If the RL agent won, record this as a terminal state with high reward
+                            if p.player_name == rl_agent_name and current_state is not None:
+                                # Get next state after winning
+                                next_state = encoder.encode_state(game_elements).numpy()[0]
+                                
+                                # Calculate reward for winning
+                                reward = calculate_reward(p, game_elements)
+                                
+                                # This is a terminal state
+                                done = True
+                                
+                                # Add experience to replay buffer
+                                replay_buffer.add(current_state, get_action_index(p,game_elements), reward, next_state, done)
+                                logger.debug(f"Added winning experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                                
+                                # Reset current state
+                                current_state = None
+                                episode_done = True
             else:
                 current_player.status = 'waiting_for_move'
         else:
@@ -297,6 +461,19 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     diagnostics.print_player_cash_balances(game_elements)
     diagnostics.print_player_net_worths(game_elements)
     logger.debug("Game ran for " + str(tot_time) + " seconds.")
+    
+    # Save the replay buffer to a file
+    buffer_stats = replay_buffer.get_stats()
+    logger.info(f"Replay buffer stats: size={buffer_stats['size']}, capacity={buffer_stats['capacity']}")
+    logger.info(f"Average reward: {buffer_stats['avg_reward']:.4f}")
+    if buffer_stats['episode_rewards']:
+        logger.info(f"Episode rewards: {buffer_stats['episode_rewards']}")
+    
+    # Save the replay buffer to a file
+    buffer_filepath = f"../single_tournament/replay_buffer_seed_{np_seed}.pkl"
+    replay_buffer.save_to_file(buffer_filepath)
+    logger.info(f"Replay buffer saved to {buffer_filepath}")
+    
     if winner:
         logger.debug('We have a winner: ' + winner.player_name)
         return winner.player_name
@@ -308,6 +485,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         else:
             logger.debug('Game has no winner, do not know what went wrong!!!')
             return None
+        
+
 def set_up_board(game_schema_file_path, player_decision_agents):
     """
     ## reimporting for avoid influence between tournaments
@@ -427,10 +606,12 @@ def play_game(inject_novelty_function=None):
     :return: String. the name of the player who won the game, if there was a winner, otherwise None.
     """
 
-    try:
-        os.makedirs('../single_tournament/')
+    # Create the log directory if it doesn't exist
+    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "single_tournament"))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
         print('Creating folder and logging gameplay.')
-    except:
+    else:
         print('Logging gameplay.')
 
     logger = log_file_create('../single_tournament/seed_6.log')
