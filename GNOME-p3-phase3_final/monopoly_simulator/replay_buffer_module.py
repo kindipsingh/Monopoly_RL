@@ -1,3 +1,4 @@
+
 import pickle
 import numpy as np
 import logging
@@ -6,6 +7,12 @@ import json
 from typing import Dict, List, Tuple, Any, Optional
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# Add a FileHandler to store all logs in replay_buffer.log
+file_handler = logging.FileHandler("replay_buffer.log")
+file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
 
 def store_player_decision(player, decision, action_index=None):
     """
@@ -452,34 +459,25 @@ def get_action_index(player, game_elements):
     Returns:
         int: The index of the action in the full action space, or 0 if not found
     """
-    # Check if player is None
     if player is None:
         logger.warning("Player object is None. Returning default action index 0.")
         return 0
     
-    try:
-        # First check if the player has a last_action_idx attribute directly
-        if hasattr(player, 'last_action_idx') and player.last_action_idx is not None:
-            logger.debug(f"Using player's last_action_idx: {player.last_action_idx}")
-            return player.last_action_idx
-        
-        # Check if the player's agent has the last_action_idx
-        if hasattr(player, 'agent') and hasattr(player.agent, 'last_action_idx'):
-            logger.debug(f"Using agent's last_action_idx: {player.agent.last_action_idx}")
-            return player.agent.last_action_idx
-        
-        # Check if we can find it in the agent's memory
-        if hasattr(player, 'agent') and hasattr(player.agent, '_agent_memory'):
-            if player.agent._agent_memory and 'last_action_idx' in player.agent._agent_memory:
-                logger.debug(f"Using last_action_idx from agent memory: {player.agent._agent_memory['last_action_idx']}")
+    if hasattr(player, 'last_action_idx') and player.last_action_idx is not None:
+        logger.debug(f"get_action_index: Using player's stored last_action_idx: {player.last_action_idx}")
+        return player.last_action_idx
+    
+    if hasattr(player, 'agent'):
+        if hasattr(player.agent, '_agent_memory') and player.agent._agent_memory is not None:
+            if 'last_action_idx' in player.agent._agent_memory:
+                logger.debug(f"get_action_index: Using last_action_idx from agent memory: {player.agent._agent_memory['last_action_idx']}")
                 return player.agent._agent_memory['last_action_idx']
-        
-        # If we can't find it, return 0 as default
-        logger.warning(f"Could not find action index for player {getattr(player, 'player_name', 'unknown')}, using default (0)")
-        return 0
-    except Exception as e:
-        logger.error(f"Error getting action index: {str(e)}")
-        return 0
+            
+    
+    
+    logger.warning(f"Could not retrieve action index for player {getattr(player, 'player_name', 'unknown')}, returning default 0.")
+    return 0
+
 def get_action_mapping():
     """
     Get a simplified mapping from action names to action indices.

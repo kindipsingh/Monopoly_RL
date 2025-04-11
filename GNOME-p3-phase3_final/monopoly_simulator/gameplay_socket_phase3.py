@@ -36,6 +36,10 @@ from monopoly_simulator import action_choices, diagnostics, card_utility_actions
 from monopoly_simulator.monopoly_state_encoder import MonopolyStateEncoder
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
+file_handler = logging.FileHandler("gameplay_socket_phase3.log")
+file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
 
 encoded_logger = logging.getLogger("encoded_state")
 encoded_logger.setLevel(logging.DEBUG)
@@ -184,31 +188,6 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             current_state = encoded_state.numpy()[0]
             logger.debug(f"Recorded state for {rl_agent_name}")
         
-        # Ensure player has allowable action methods
-        if not hasattr(current_player, 'compute_allowable_pre_roll_actions'):
-            def default_pre_roll_actions(game_elements):
-                actions = ['skip_turn']
-                logger.debug(f"Default allowable pre-roll actions for {current_player.player_name}: {actions}")
-                return actions
-            current_player.compute_allowable_pre_roll_actions = default_pre_roll_actions
-            logger.debug(f"Assigned default compute_allowable_pre_roll_actions for {current_player.player_name}")
-            
-        if not hasattr(current_player, 'compute_allowable_post_roll_actions'):
-            def default_post_roll_actions(game_elements):
-                actions = ['buy_property']
-                logger.debug(f"Default allowable post-roll actions for {current_player.player_name}: {actions}")
-                return actions
-            current_player.compute_allowable_post_roll_actions = default_post_roll_actions
-            logger.debug(f"Assigned default compute_allowable_post_roll_actions for {current_player.player_name}")
-            
-        if not hasattr(current_player, 'compute_allowable_out_of_turn_actions'):
-            def default_out_of_turn_actions(game_elements):
-                actions = ['skip_turn']
-                logger.debug(f"Default allowable out-of-turn actions for {current_player.player_name}: {actions}")
-                return actions
-            current_player.compute_allowable_out_of_turn_actions = default_out_of_turn_actions
-            logger.debug(f"Assigned default compute_allowable_out_of_turn_actions for {current_player.player_name}")
-        
         # Log allowable pre-roll actions for debugging
         pre_roll_allowable = current_player.compute_allowable_pre_roll_actions(game_elements)
         logger.debug(f"Pre-roll allowable actions for {current_player.player_name}: {pre_roll_allowable}")
@@ -236,7 +215,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             
             # Add experience to replay buffer
             replay_buffer.add(current_state, action_idx, reward, next_state, done)
-            logger.debug(f"Added pre-roll experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+            logger.debug(f"Added pre-roll experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f}")
             
             # Update current state for next action
             current_state = next_state
@@ -298,7 +277,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 
                 # Add experience to replay buffer
                 replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                logger.debug(f"Added out-of-turn experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                logger.debug(f"Added out-of-turn experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f}")
                 
                 # Update current state for next action
                 current_state = next_state
@@ -371,7 +350,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 
                 # Add experience to replay buffer
                 replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                logger.debug(f"Added post-roll experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                logger.debug(f"Added post-roll experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f} ")
                 
                 # Update current state for next action
                 current_state = next_state

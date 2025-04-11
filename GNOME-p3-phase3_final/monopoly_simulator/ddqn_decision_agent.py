@@ -544,13 +544,18 @@ class DDQNDecisionAgent(Agent):
             rl_logger.debug(f"Action_idx value: {action_idx}")
              # IMPORTANT: Store the action_idx in the player object and agent memory
             player.last_action_idx = action_idx
+            rl_logger.debug(f"{player.last_action_idx}")
         
             # Also store in agent memory if available
             if hasattr(player, 'agent') and player.agent is not None:
                 player.agent.last_action_idx = action_idx
+                rl_logger.debug(f"1")
                 if not hasattr(player.agent, '_agent_memory') or player.agent._agent_memory is None:
                     player.agent._agent_memory = {}
+                    rl_logger.debug(f"2")
                 player.agent._agent_memory['last_action_idx'] = action_idx
+            
+            rl_logger.debug(f"{player.agent._agent_memory['last_action_idx']}")
         
             # Store in the DDQN agent for later training
             self.last_action_idx = action_idx
@@ -646,9 +651,9 @@ class DDQNDecisionAgent(Agent):
         for asset in player.assets:
             property_value += asset.price
             if hasattr(asset, 'num_houses'):
-                property_value += asset.num_houses * asset.house_price
+                property_value += asset.num_houses * asset.price_per_house
             if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
-                property_value += asset.num_hotels * asset.house_price * 5
+                property_value += asset.num_hotels * asset.price_per_house * 5
         
         # Calculate total net worth
         total_net_worth = net_worth + property_value
