@@ -1,27 +1,28 @@
+
 #!/bin/bash
 
 # Set the Python path to include the project directory
 export PYTHONPATH=${PWD}/../:${PYTHONPATH}
 
-# Create directories for logs and models
+# Create necessary directories for logs, models and single_tournament buffers
 mkdir -p ../logs
 mkdir -p ../models
 
-# Parse command line arguments
-MODE="train"
-NUM_GAMES=100
-SAVE_INTERVAL=10
-MODEL_PATH="../models/ddqn_model_final.pth"
-LEARNING_RATE=0.00001
-GAMMA=0.99
-BATCH_SIZE=64
-REPLAY_CAPACITY=10000
-TARGET_UPDATE_FREQ=5
-EPSILON_START=1.0
-EPSILON_END=0.1
-EPSILON_DECAY=0.995
+# Default configuration
+MODE="train"                    # Default mode: train; alternatives: evaluate, analyze
+NUM_GAMES=2                   # Number of games for training/evaluation
+SAVE_INTERVAL=1                # Save model every SAVE_INTERVAL games
+MODEL_PATH="../models/ddqn_model_final.pth"  # Model file to load/save
+LEARNING_RATE=0.00001           # Learning rate
+GAMMA=0.99                      # Discount factor gamma
+BATCH_SIZE=64                   # Training batch size
+REPLAY_CAPACITY=10000           # Maximum replay buffer capacity (unused when combining files)
+TARGET_UPDATE_FREQ=5            # Update target network every TARGET_UPDATE_FREQ games
+EPSILON_START=1.0               # Starting epsilon for exploration
+EPSILON_END=0.1                 # Minimum epsilon
+EPSILON_DECAY=0.995             # Epsilon decay rate
 
-# Parse command line arguments
+# Parse command line arguments to override defaults if provided
 while [[ $# -gt 0 ]]; do
   case $1 in
     --mode)
@@ -118,9 +119,10 @@ elif [ "$MODE" = "evaluate" ]; then
         --model_path $MODEL_PATH
 elif [ "$MODE" = "analyze" ]; then
     echo "Analyzing replay buffer..."
+    # In this analysis mode, adjust the buffer_path if needed.
     python train_ddqn_agent.py \
         --mode analyze \
-        --buffer_path replay_buffer.pkl
+        --buffer_path ../monopoly_simulator/replay_buffer.pkl
 else
     echo "Unknown mode: $MODE"
     exit 1

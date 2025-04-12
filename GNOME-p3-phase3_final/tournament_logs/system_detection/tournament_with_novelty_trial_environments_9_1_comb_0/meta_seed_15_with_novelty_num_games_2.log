@@ -1,9 +1,0 @@
-2025-03-18 00:46:04,779:monopoly_simulator.logging_info.init_game_elements:DEBUG:Beginning game set up...
-2025-03-18 00:46:04,779:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized bank.
-2025-03-18 00:46:04,779:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized all locations on board.
-2025-03-18 00:46:04,779:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized dies
-2025-03-18 00:46:04,780:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized cards
-2025-03-18 00:46:04,780:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated and initialized players and decision agents
-2025-03-18 00:46:04,780:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated game history data structures
-2025-03-18 00:46:04,780:monopoly_simulator.logging_info.init_game_elements:DEBUG:Successfully instantiated schema data structures
-2025-03-18 00:46:04,782:monopoly_simulator.logging_info:DEBUG:Sucessfully initialized all player agents.

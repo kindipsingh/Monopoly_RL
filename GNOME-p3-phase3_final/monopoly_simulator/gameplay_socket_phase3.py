@@ -5,7 +5,6 @@ import numpy as np
 from monopoly_simulator import card_utility_actions
 from monopoly_simulator import background_agent_v3_1
 from monopoly_simulator import ddqn_decision_agent
-from monopoly_simulator import background_agent_v1_2
 from monopoly_simulator import read_write_current_state
 import json
 from monopoly_simulator import novelty_generator
@@ -118,6 +117,7 @@ def disable_history(game_elements):
     game_elements['history']['return'] = list()
     game_elements['history']['time_step'] = list()
 
+
 def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, state_logger=None):
     """
     Simulate a game instance with replay buffer collection for the RL agent (player_3).
@@ -129,17 +129,87 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     :return: The winner's name if the game terminates naturally.
     """
     # Import the replay buffer module
-    from monopoly_simulator.replay_buffer_module import ReplayBuffer, calculate_reward, get_action_index, is_episode_done
+    from monopoly_simulator.replay_buffer_module import ReplayBuffer, calculate_reward, get_action_index, is_episode_done, add_to_replay_buffer, store_player_decision
     from monopoly_simulator.ddqn_decision_agent import ddqn_agent_instance
+    from monopoly_simulator.action_encoding import ActionEncoder
     
     # Initialize replay buffer for player_3 (RL agent)
     rl_agent_name = 'player_3'
     replay_buffer = ReplayBuffer(capacity=100000)  # Adjust capacity as needed
     
+    # Store the replay buffer in game_elements so it can be accessed by other components
+    game_elements['replay_buffer'] = replay_buffer
+    
+    # Initialize the action encoder for building the full action mapping
+    action_encoder = ActionEncoder()
+    
     # Variables to track state and action for the RL agent
     current_state = None
-    current_action = None
     episode_done = False
+    
+    # Create a function to track individual actions for the RL agent
+    def track_action(player, action_name, game_elements):
+        nonlocal current_state
+        
+        if player.player_name != rl_agent_name or current_state is None:
+            return
+            
+        # Encode the state after the action
+        next_state = encoder.encode_state(game_elements).numpy()[0]
+        
+        # Calculate reward
+        reward = calculate_reward(player, game_elements)
+        
+        # Check if episode is done
+        done = is_episode_done(player, game_elements)
+        
+        # Get the action index from the full mapping
+        action_idx = get_action_index(player, game_elements)
+        
+        # Store the action in the player for debugging
+        player.last_action_name = action_name
+        
+        # Add experience to replay buffer
+        replay_buffer.add(current_state, action_idx, reward, next_state, done)
+        logger.debug(f"Added individual action experience to replay buffer for {rl_agent_name}, action: {action_name} (idx: {action_idx}), reward: {reward:.2f}")
+        
+        # Update current state for next action
+        current_state = next_state
+        
+        # If episode is done, reset current state
+        if done:
+            current_state = None
+            nonlocal episode_done
+            episode_done = True
+    
+    # Monkey patch the _execute_action method of Player to track actions
+    original_execute_action = player.Player._execute_action
+    
+    def execute_action_with_tracking(self, action_to_execute, parameters, current_gameboard):
+        # Get the action name (function name)
+        action_name = action_to_execute.__name__ if callable(action_to_execute) else action_to_execute
+        
+        # Log the action before execution
+        logger.debug(f"Player {self.player_name} executing action: {action_name}")
+        
+        # If this is the RL agent and we have a current state, capture the state before action
+        if self.player_name == rl_agent_name and not episode_done:
+            nonlocal current_state
+            if current_state is None:
+                current_state = encoder.encode_state(current_gameboard).numpy()[0]
+        
+        # Execute the original action
+        result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
+        
+        # Track the action for the RL agent if it's a meaningful action
+        if self.player_name == rl_agent_name and not episode_done:
+            # Build the full action mapping to get the correct index
+            track_action(self, action_name, current_gameboard)
+        
+        return result
+    
+    # Apply the monkey patch
+    player.Player._execute_action = execute_action_with_tracking
     
     logger.debug("size of board " + str(len(game_elements['location_sequence'])))
     np.random.seed(np_seed)
@@ -199,31 +269,11 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         # After pre-roll moves, log the pre-roll action vector
         vector_logger.log_pre_roll(current_player, game_elements)
         
-        # If this was the RL agent's turn, record the action and next state
+        # If this was the RL agent's turn and the last action was a conclude action, record it
         if current_player.player_name == rl_agent_name and current_state is not None:
-            # Get action index from the agent using the function from replay_buffer_module
-            action_idx = get_action_index(current_player,game_elements)
-            
-            # Get next state
-            next_state = encoder.encode_state(game_elements).numpy()[0]
-            
-            # Calculate reward using the DDQN agent's reward calculation function
-            reward = calculate_reward(current_player, game_elements)
-            
-            # Check if episode is done
-            done = is_episode_done(current_player, game_elements)
-            
-            # Add experience to replay buffer
-            replay_buffer.add(current_state, action_idx, reward, next_state, done)
-            logger.debug(f"Added pre-roll experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f}")
-            
-            # Update current state for next action
-            current_state = next_state
-            
-            # If episode is done, reset current state
-            if done:
-                current_state = None
-                episode_done = True
+            # Only add the conclude action if it wasn't already added by the tracking function
+            if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
+                track_action(current_player, 'concluded_actions', game_elements)
         
         if pre_roll_code == 2:
             skip_turn += 1
@@ -261,31 +311,11 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             # Log the action vector for out-of-turn moves
             vector_logger.log_out_of_turn(out_of_turn_player, game_elements)
             
-            # If this was the RL agent's turn, record the action and next state
+            # If this was the RL agent's turn and the last action was a skip action, record it
             if out_of_turn_player.player_name == rl_agent_name and current_state is not None:
-                # Get action index from the agent
-                action_idx = get_action_index(out_of_turn_player,game_elements)
-                
-                # Get next state
-                next_state = encoder.encode_state(game_elements).numpy()[0]
-                
-                # Calculate reward
-                reward = calculate_reward(out_of_turn_player, game_elements)
-                
-                # Check if episode is done
-                done = is_episode_done(out_of_turn_player, game_elements)
-                
-                # Add experience to replay buffer
-                replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                logger.debug(f"Added out-of-turn experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f}")
-                
-                # Update current state for next action
-                current_state = next_state
-                
-                # If episode is done, reset current state
-                if done:
-                    current_state = None
-                    episode_done = True
+                # Only add the skip action if it wasn't already added by the tracking function
+                if not hasattr(out_of_turn_player, 'last_action_name') or out_of_turn_player.last_action_name != 'skip_turn':
+                    track_action(out_of_turn_player, 'skip_turn', game_elements)
             
             if state_logger:
                 state_logger(game_elements.copy())
@@ -302,6 +332,11 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         num_die_rolls += 1
         game_elements['current_die_total'] = sum(r)
         logger.debug('dice have come up: ' + str(r))
+        
+        # If this is the RL agent's turn, record the roll_die action
+        if current_player.player_name == rl_agent_name and current_state is not None:
+            track_action(current_player, 'roll_die', game_elements)
+        
         if state_logger:
             state_logger(copy.deepcopy(game_elements))
             
@@ -334,31 +369,11 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             # Log the post-roll action vector after moves
             vector_logger.log_post_roll(current_player, game_elements)
             
-            # If this was the RL agent's turn, record the action and next state
+            # If this was the RL agent's turn and the last action was a conclude action, record it
             if current_player.player_name == rl_agent_name and current_state is not None:
-                # Get action index from the agent
-                action_idx = get_action_index(current_player,game_elements)
-                
-                # Get next state
-                next_state = encoder.encode_state(game_elements).numpy()[0]
-                
-                # Calculate reward
-                reward = calculate_reward(current_player, game_elements)
-                
-                # Check if episode is done
-                done = is_episode_done(current_player, game_elements)
-                
-                # Add experience to replay buffer
-                replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                logger.debug(f"Added post-roll experience to replay buffer for {rl_agent_name},action: {action_idx}, reward: {reward:.2f} ")
-                
-                # Update current state for next action
-                current_state = next_state
-                
-                # If episode is done, reset current state
-                if done:
-                    current_state = None
-                    episode_done = True
+                # Only add the conclude action if it wasn't already added by the tracking function
+                if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
+                    track_action(current_player, 'concluded_actions', game_elements)
             
             if state_logger:
                 state_logger(copy.deepcopy(game_elements))
@@ -387,9 +402,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                     # This is a terminal state
                     done = True
                     
-                    # Add experience to replay buffer
-                    replay_buffer.add(current_state, get_action_index(current_player,game_elements), reward, next_state, done)
-                    logger.debug(f"Added bankruptcy experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                    # Add experience to replay buffer using the proper action index
+                    action_idx = get_action_index(current_player, game_elements)
+                    replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                    logger.debug(f"Added bankruptcy experience to replay buffer for {rl_agent_name}, action index: {action_idx}, reward: {reward:.2f}")
                     
                     # Reset current state
                     current_state = None
@@ -413,9 +429,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                                 # This is a terminal state
                                 done = True
                                 
-                                # Add experience to replay buffer
-                                replay_buffer.add(current_state, get_action_index(p,game_elements), reward, next_state, done)
-                                logger.debug(f"Added winning experience to replay buffer for {rl_agent_name}, reward: {reward:.2f}")
+                                # Add experience to replay buffer using the proper action index
+                                action_idx = get_action_index(p, game_elements)
+                                replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                                logger.debug(f"Added winning experience to replay buffer for {rl_agent_name}, action index: {action_idx}, reward: {reward:.2f}")
                                 
                                 # Reset current state
                                 current_state = None
@@ -435,6 +452,9 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     for handler in vector_logger.logger.handlers:
         handler.close()
         vector_logger.logger.removeHandler(handler)
+
+    # Restore the original _execute_action method
+    player.Player._execute_action = original_execute_action
 
     diagnostics.print_asset_owners(game_elements)
     diagnostics.print_player_cash_balances(game_elements)
@@ -464,7 +484,6 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         else:
             logger.debug('Game has no winner, do not know what went wrong!!!')
             return None
-        
 
 def set_up_board(game_schema_file_path, player_decision_agents):
     """
@@ -891,7 +910,8 @@ def play_game_in_tournament_socket_phase3( game_seed, agent1, agent2, agent3, ag
     player_decision_agents = dict()
 
     if agent1 is not None:
-        player_decision_agents['player_1'] = agent1
+        player_decision_agents['player_1'] = Agent(**background_agent_v3_1.decision_agent_methods)
+        # player_decision_agents['player_1'] = agent1
     else:
         player_decision_agents['player_1'] = Agent(**background_agent_v3_1.decision_agent_methods)
     player_decision_agents['player_2'] = Agent(**agent2.decision_agent_methods)

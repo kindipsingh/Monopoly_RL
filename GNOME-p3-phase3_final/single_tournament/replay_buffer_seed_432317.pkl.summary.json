@@ -1,0 +1,1499 @@
+{
+  "size": 186,
+  "capacity": 100000,
+  "utilization": 0.00186,
+  "episode_rewards": [
+    -37.453800000000044
+  ],
+  "avg_reward": -0.20136451612903225,
+  "all_entries": [
+    {
+      "index": 0,
+      "state_summary": "Array of shape (240,), mean: 0.012188700959086418",
+      "action": 2932,
+      "reward": 0.44999999999999996,
+      "next_state_summary": "Array of shape (240,), mean: 0.012188700959086418",
+      "done": false
+    },
+    {
+      "index": 1,
+      "state_summary": "Array of shape (240,), mean: 0.012188700959086418",
+      "action": 2932,
+      "reward": 0.44999999999999996,
+      "next_state_summary": "Array of shape (240,), mean: 0.012188700959086418",
+      "done": false
+    },
+    {
+      "index": 2,
+      "state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "action": 2608,
+      "reward": 0.44999999999999996,
+      "next_state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "done": false
+    },
+    {
+      "index": 3,
+      "state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "action": 2932,
+      "reward": 0.44999999999999996,
+      "next_state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "done": false
+    },
+    {
+      "index": 4,
+      "state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "action": 2932,
+      "reward": 0.44999999999999996,
+      "next_state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "done": false
+    },
+    {
+      "index": 5,
+      "state_summary": "Array of shape (240,), mean: 0.016650859266519547",
+      "action": 2845,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 6,
+      "state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 7,
+      "state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 8,
+      "state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 9,
+      "state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 10,
+      "state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.012492782436311245",
+      "done": false
+    },
+    {
+      "index": 11,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2692,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 12,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 13,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 14,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2931,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 15,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2932,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 16,
+      "state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "action": 2932,
+      "reward": 0.44099999999999995,
+      "next_state_summary": "Array of shape (240,), mean: 0.0169549398124218",
+      "done": false
+    },
+    {
+      "index": 17,
+      "state_summary": "Array of shape (240,), mean: 0.016954587772488594",
+      "action": 2845,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.012796691618859768",
+      "done": false
+    },
+    {
+      "index": 18,
+      "state_summary": "Array of shape (240,), mean: 0.012796691618859768",
+      "action": 2932,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.012796691618859768",
+      "done": false
+    },
+    {
+      "index": 19,
+      "state_summary": "Array of shape (240,), mean: 0.012796691618859768",
+      "action": 2932,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.012796691618859768",
+      "done": false
+    },
+    {
+      "index": 20,
+      "state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "action": 2537,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "done": false
+    },
+    {
+      "index": 21,
+      "state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "action": 2931,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "done": false
+    },
+    {
+      "index": 22,
+      "state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "action": 2931,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "done": false
+    },
+    {
+      "index": 23,
+      "state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "action": 2932,
+      "reward": 0.43199999999999994,
+      "next_state_summary": "Array of shape (240,), mean: 0.017866114154458046",
+      "done": false
+    },
+    {
+      "index": 24,
+      "state_summary": "Array of shape (240,), mean: 0.017863275483250618",
+      "action": 2849,
+      "reward": 0.405,
+      "next_state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "done": false
+    },
+    {
+      "index": 25,
+      "state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "action": 2932,
+      "reward": 0.405,
+      "next_state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "done": false
+    },
+    {
+      "index": 26,
+      "state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "action": 2932,
+      "reward": 0.405,
+      "next_state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "done": false
+    },
+    {
+      "index": 27,
+      "state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "action": 2932,
+      "reward": 0.405,
+      "next_state_summary": "Array of shape (240,), mean: 0.013715551234781742",
+      "done": false
+    },
+    {
+      "index": 28,
+      "state_summary": "Array of shape (240,), mean: 0.014548884704709053",
+      "action": 2933,
+      "reward": 0.385,
+      "next_state_summary": "Array of shape (240,), mean: 0.018683485686779022",
+      "done": false
+    },
+    {
+      "index": 29,
+      "state_summary": "Array of shape (240,), mean: 0.018683485686779022",
+      "action": 2876,
+      "reward": -0.09999999999999998,
+      "next_state_summary": "Array of shape (240,), mean: 0.022866491228342056",
+      "done": false
+    },
+    {
+      "index": 30,
+      "state_summary": "Array of shape (240,), mean: 0.022866491228342056",
+      "action": 2904,
+      "reward": 0.3835,
+      "next_state_summary": "Array of shape (240,), mean: 0.018681814894080162",
+      "done": false
+    },
+    {
+      "index": 31,
+      "state_summary": "Array of shape (240,), mean: 0.018681814894080162",
+      "action": 2848,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.014531554654240608",
+      "done": false
+    },
+    {
+      "index": 32,
+      "state_summary": "Array of shape (240,), mean: 0.014531554654240608",
+      "action": 2931,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.014531554654240608",
+      "done": false
+    },
+    {
+      "index": 33,
+      "state_summary": "Array of shape (240,), mean: 0.014531554654240608",
+      "action": 2931,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.014531554654240608",
+      "done": false
+    },
+    {
+      "index": 34,
+      "state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "action": 2632,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "done": false
+    },
+    {
+      "index": 35,
+      "state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "action": 2931,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "done": false
+    },
+    {
+      "index": 36,
+      "state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "action": 2931,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "done": false
+    },
+    {
+      "index": 37,
+      "state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "action": 2932,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "done": false
+    },
+    {
+      "index": 38,
+      "state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "action": 2932,
+      "reward": 0.3885,
+      "next_state_summary": "Array of shape (240,), mean: 0.019797056913375854",
+      "done": false
+    },
+    {
+      "index": 39,
+      "state_summary": "Array of shape (240,), mean: 0.019789105281233788",
+      "action": 2853,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.01565081812441349",
+      "done": false
+    },
+    {
+      "index": 40,
+      "state_summary": "Array of shape (240,), mean: 0.01565081812441349",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.01565081812441349",
+      "done": false
+    },
+    {
+      "index": 41,
+      "state_summary": "Array of shape (240,), mean: 0.01565081812441349",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.01565081812441349",
+      "done": false
+    },
+    {
+      "index": 42,
+      "state_summary": "Array of shape (240,), mean: 0.016379985958337784",
+      "action": 2931,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.016379985958337784",
+      "done": false
+    },
+    {
+      "index": 43,
+      "state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "done": false
+    },
+    {
+      "index": 44,
+      "state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "done": false
+    },
+    {
+      "index": 45,
+      "state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "done": false
+    },
+    {
+      "index": 46,
+      "state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "action": 2932,
+      "reward": 0.3645,
+      "next_state_summary": "Array of shape (240,), mean: 0.017218729481101036",
+      "done": false
+    },
+    {
+      "index": 47,
+      "state_summary": "Array of shape (240,), mean: 0.018052062019705772",
+      "action": 2933,
+      "reward": 0.3285,
+      "next_state_summary": "Array of shape (240,), mean: 0.022151919081807137",
+      "done": false
+    },
+    {
+      "index": 48,
+      "state_summary": "Array of shape (240,), mean: 0.022151919081807137",
+      "action": 2855,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.018019994720816612",
+      "done": false
+    },
+    {
+      "index": 49,
+      "state_summary": "Array of shape (240,), mean: 0.018019994720816612",
+      "action": 2932,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.018019994720816612",
+      "done": false
+    },
+    {
+      "index": 50,
+      "state_summary": "Array of shape (240,), mean: 0.018019994720816612",
+      "action": 2931,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.018019994720816612",
+      "done": false
+    },
+    {
+      "index": 51,
+      "state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "action": 2648,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "done": false
+    },
+    {
+      "index": 52,
+      "state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "action": 2931,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "done": false
+    },
+    {
+      "index": 53,
+      "state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "action": 2931,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "done": false
+    },
+    {
+      "index": 54,
+      "state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "action": 2932,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "done": false
+    },
+    {
+      "index": 55,
+      "state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "action": 2932,
+      "reward": 0.3375,
+      "next_state_summary": "Array of shape (240,), mean: 0.02284974232316017",
+      "done": false
+    },
+    {
+      "index": 56,
+      "state_summary": "Array of shape (240,), mean: 0.022814041003584862",
+      "action": 2886,
+      "reward": -0.19,
+      "next_state_summary": "Array of shape (240,), mean: 0.027031414210796356",
+      "done": false
+    },
+    {
+      "index": 57,
+      "state_summary": "Array of shape (240,), mean: 0.027031414210796356",
+      "action": 2914,
+      "reward": 0.2737,
+      "next_state_summary": "Array of shape (240,), mean: 0.022808613255620003",
+      "done": false
+    },
+    {
+      "index": 58,
+      "state_summary": "Array of shape (240,), mean: 0.022808613255620003",
+      "action": 2886,
+      "reward": -0.19330000000000003,
+      "next_state_summary": "Array of shape (240,), mean: 0.027026614174246788",
+      "done": false
+    },
+    {
+      "index": 59,
+      "state_summary": "Array of shape (240,), mean: 0.027026614174246788",
+      "action": 2914,
+      "reward": 0.2704,
+      "next_state_summary": "Array of shape (240,), mean: 0.022803114727139473",
+      "done": false
+    },
+    {
+      "index": 60,
+      "state_summary": "Array of shape (240,), mean: 0.022803114727139473",
+      "action": 2858,
+      "reward": 0.2704,
+      "next_state_summary": "Array of shape (240,), mean: 0.022803114727139473",
+      "done": false
+    },
+    {
+      "index": 61,
+      "state_summary": "Array of shape (240,), mean: 0.022803114727139473",
+      "action": 2858,
+      "reward": 0.2704,
+      "next_state_summary": "Array of shape (240,), mean: 0.022803114727139473",
+      "done": false
+    },
+    {
+      "index": 62,
+      "state_summary": "Array of shape (240,), mean: 0.02743098884820938",
+      "action": 2720,
+      "reward": 0.2704,
+      "next_state_summary": "Array of shape (240,), mean: 0.02743098884820938",
+      "done": false
+    },
+    {
+      "index": 63,
+      "state_summary": "Array of shape (240,), mean: 0.02743098884820938",
+      "action": 2886,
+      "reward": -0.1966,
+      "next_state_summary": "Array of shape (240,), mean: 0.0316496305167675",
+      "done": false
+    },
+    {
+      "index": 64,
+      "state_summary": "Array of shape (240,), mean: 0.0316496305167675",
+      "action": 2914,
+      "reward": 0.2671,
+      "next_state_summary": "Array of shape (240,), mean: 0.027425415813922882",
+      "done": false
+    },
+    {
+      "index": 65,
+      "state_summary": "Array of shape (240,), mean: 0.027425415813922882",
+      "action": 2858,
+      "reward": 0.2781,
+      "next_state_summary": "Array of shape (240,), mean: 0.023311380296945572",
+      "done": false
+    },
+    {
+      "index": 66,
+      "state_summary": "Array of shape (240,), mean: 0.023311380296945572",
+      "action": 2932,
+      "reward": 0.2781,
+      "next_state_summary": "Array of shape (240,), mean: 0.023311380296945572",
+      "done": false
+    },
+    {
+      "index": 67,
+      "state_summary": "Array of shape (240,), mean: 0.023311380296945572",
+      "action": 2932,
+      "reward": 0.2781,
+      "next_state_summary": "Array of shape (240,), mean: 0.023311380296945572",
+      "done": false
+    },
+    {
+      "index": 68,
+      "state_summary": "Array of shape (240,), mean: 0.02325371839106083",
+      "action": 2882,
+      "reward": -0.2469,
+      "next_state_summary": "Array of shape (240,), mean: 0.027477789670228958",
+      "done": false
+    },
+    {
+      "index": 69,
+      "state_summary": "Array of shape (240,), mean: 0.027477789670228958",
+      "action": 2910,
+      "reward": 0.2201,
+      "next_state_summary": "Array of shape (240,), mean: 0.02324751764535904",
+      "done": false
+    },
+    {
+      "index": 70,
+      "state_summary": "Array of shape (240,), mean: 0.02324751764535904",
+      "action": 2882,
+      "reward": -0.2499,
+      "next_state_summary": "Array of shape (240,), mean: 0.027472389861941338",
+      "done": false
+    },
+    {
+      "index": 71,
+      "state_summary": "Array of shape (240,), mean: 0.027472389861941338",
+      "action": 2910,
+      "reward": 0.2171,
+      "next_state_summary": "Array of shape (240,), mean: 0.023241223767399788",
+      "done": false
+    },
+    {
+      "index": 72,
+      "state_summary": "Array of shape (240,), mean: 0.023241223767399788",
+      "action": 2882,
+      "reward": 0.2171,
+      "next_state_summary": "Array of shape (240,), mean: 0.023241223767399788",
+      "done": false
+    },
+    {
+      "index": 73,
+      "state_summary": "Array of shape (240,), mean: 0.023241223767399788",
+      "action": 2882,
+      "reward": 0.2171,
+      "next_state_summary": "Array of shape (240,), mean: 0.023241223767399788",
+      "done": false
+    },
+    {
+      "index": 74,
+      "state_summary": "Array of shape (240,), mean: 0.028373051434755325",
+      "action": 2882,
+      "reward": -0.2529,
+      "next_state_summary": "Array of shape (240,), mean: 0.03259874880313873",
+      "done": false
+    },
+    {
+      "index": 75,
+      "state_summary": "Array of shape (240,), mean: 0.03259874880313873",
+      "action": 2578,
+      "reward": -0.2529,
+      "next_state_summary": "Array of shape (240,), mean: 0.03259874880313873",
+      "done": false
+    },
+    {
+      "index": 76,
+      "state_summary": "Array of shape (240,), mean: 0.03259874880313873",
+      "action": 2910,
+      "reward": 0.21409999999999998,
+      "next_state_summary": "Array of shape (240,), mean: 0.028366660699248314",
+      "done": false
+    },
+    {
+      "index": 77,
+      "state_summary": "Array of shape (240,), mean: 0.028366660699248314",
+      "action": 2854,
+      "reward": 0.22410000000000002,
+      "next_state_summary": "Array of shape (240,), mean: 0.02425987645983696",
+      "done": false
+    },
+    {
+      "index": 78,
+      "state_summary": "Array of shape (240,), mean: 0.02425987645983696",
+      "action": 2932,
+      "reward": 0.22410000000000002,
+      "next_state_summary": "Array of shape (240,), mean: 0.02425987645983696",
+      "done": false
+    },
+    {
+      "index": 79,
+      "state_summary": "Array of shape (240,), mean: 0.024158131331205368",
+      "action": 2891,
+      "reward": -0.2889,
+      "next_state_summary": "Array of shape (240,), mean: 0.028423385694622993",
+      "done": false
+    },
+    {
+      "index": 80,
+      "state_summary": "Array of shape (240,), mean: 0.028423385694622993",
+      "action": 2919,
+      "reward": 0.0734,
+      "next_state_summary": "Array of shape (240,), mean: 0.024146858602762222",
+      "done": false
+    },
+    {
+      "index": 81,
+      "state_summary": "Array of shape (240,), mean: 0.024146858602762222",
+      "action": 2863,
+      "reward": 0.1812,
+      "next_state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "done": false
+    },
+    {
+      "index": 82,
+      "state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "action": 2932,
+      "reward": 0.1812,
+      "next_state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "done": false
+    },
+    {
+      "index": 83,
+      "state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "action": 2932,
+      "reward": 0.1812,
+      "next_state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "done": false
+    },
+    {
+      "index": 84,
+      "state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "action": 2932,
+      "reward": 0.1812,
+      "next_state_summary": "Array of shape (240,), mean: 0.020081179216504097",
+      "done": false
+    },
+    {
+      "index": 85,
+      "state_summary": "Array of shape (240,), mean: 0.020602012053132057",
+      "action": 2933,
+      "reward": 0.0604,
+      "next_state_summary": "Array of shape (240,), mean: 0.024579955264925957",
+      "done": false
+    },
+    {
+      "index": 86,
+      "state_summary": "Array of shape (240,), mean: 0.024579955264925957",
+      "action": 2858,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.020518245175480843",
+      "done": false
+    },
+    {
+      "index": 87,
+      "state_summary": "Array of shape (240,), mean: 0.020518245175480843",
+      "action": 2932,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.020518245175480843",
+      "done": false
+    },
+    {
+      "index": 88,
+      "state_summary": "Array of shape (240,), mean: 0.020518245175480843",
+      "action": 2931,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.020518245175480843",
+      "done": false
+    },
+    {
+      "index": 89,
+      "state_summary": "Array of shape (240,), mean: 0.02178143337368965",
+      "action": 2931,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.02178143337368965",
+      "done": false
+    },
+    {
+      "index": 90,
+      "state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "action": 2736,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "done": false
+    },
+    {
+      "index": 91,
+      "state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "action": 2931,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "done": false
+    },
+    {
+      "index": 92,
+      "state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "action": 2932,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "done": false
+    },
+    {
+      "index": 93,
+      "state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "action": 2932,
+      "reward": 0.0494,
+      "next_state_summary": "Array of shape (240,), mean: 0.02681550197303295",
+      "done": false
+    },
+    {
+      "index": 94,
+      "state_summary": "Array of shape (240,), mean: 0.026680339127779007",
+      "action": 2860,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.0226485263556242",
+      "done": false
+    },
+    {
+      "index": 95,
+      "state_summary": "Array of shape (240,), mean: 0.0226485263556242",
+      "action": 2932,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.0226485263556242",
+      "done": false
+    },
+    {
+      "index": 96,
+      "state_summary": "Array of shape (240,), mean: 0.0226485263556242",
+      "action": 2932,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.0226485263556242",
+      "done": false
+    },
+    {
+      "index": 97,
+      "state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "action": 2596,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "done": false
+    },
+    {
+      "index": 98,
+      "state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "action": 2931,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "done": false
+    },
+    {
+      "index": 99,
+      "state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "action": 2932,
+      "reward": 0.0434,
+      "next_state_summary": "Array of shape (240,), mean: 0.02759096585214138",
+      "done": false
+    },
+    {
+      "index": 100,
+      "state_summary": "Array of shape (240,), mean: 0.027391143143177032",
+      "action": 2869,
+      "reward": 0.0334,
+      "next_state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "done": false
+    },
+    {
+      "index": 101,
+      "state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "action": 2932,
+      "reward": 0.0334,
+      "next_state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "done": false
+    },
+    {
+      "index": 102,
+      "state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "action": 2932,
+      "reward": 0.0334,
+      "next_state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "done": false
+    },
+    {
+      "index": 103,
+      "state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "action": 2932,
+      "reward": 0.0334,
+      "next_state_summary": "Array of shape (240,), mean: 0.02337273396551609",
+      "done": false
+    },
+    {
+      "index": 104,
+      "state_summary": "Array of shape (240,), mean: 0.0245185699313879",
+      "action": 2933,
+      "reward": 0.0334,
+      "next_state_summary": "Array of shape (240,), mean: 0.027733242139220238",
+      "done": false
+    },
+    {
+      "index": 105,
+      "state_summary": "Array of shape (240,), mean: 0.027733242139220238",
+      "action": 2895,
+      "reward": -0.4516,
+      "next_state_summary": "Array of shape (240,), mean: 0.03260348364710808",
+      "done": false
+    },
+    {
+      "index": 106,
+      "state_summary": "Array of shape (240,), mean: 0.03260348364710808",
+      "action": 2923,
+      "reward": 0.0319,
+      "next_state_summary": "Array of shape (240,), mean: 0.027490774169564247",
+      "done": false
+    },
+    {
+      "index": 107,
+      "state_summary": "Array of shape (240,), mean: 0.027490774169564247",
+      "action": 2867,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "done": false
+    },
+    {
+      "index": 108,
+      "state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "done": false
+    },
+    {
+      "index": 109,
+      "state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "done": false
+    },
+    {
+      "index": 110,
+      "state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.024234715849161148",
+      "done": false
+    },
+    {
+      "index": 111,
+      "state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "done": false
+    },
+    {
+      "index": 112,
+      "state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "done": false
+    },
+    {
+      "index": 113,
+      "state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "done": false
+    },
+    {
+      "index": 114,
+      "state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.021076949313282967",
+      "done": false
+    },
+    {
+      "index": 115,
+      "state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "action": 2759,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "done": false
+    },
+    {
+      "index": 116,
+      "state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "done": false
+    },
+    {
+      "index": 117,
+      "state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "action": 2932,
+      "reward": 0.0169,
+      "next_state_summary": "Array of shape (240,), mean: 0.02598327398300171",
+      "done": false
+    },
+    {
+      "index": 118,
+      "state_summary": "Array of shape (240,), mean: 0.02395995520055294",
+      "action": 2867,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 119,
+      "state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "action": 2931,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 120,
+      "state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "action": 2931,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 121,
+      "state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "action": 2931,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 122,
+      "state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 123,
+      "state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.01979328878223896",
+      "done": false
+    },
+    {
+      "index": 124,
+      "state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "done": false
+    },
+    {
+      "index": 125,
+      "state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "done": false
+    },
+    {
+      "index": 126,
+      "state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "done": false
+    },
+    {
+      "index": 127,
+      "state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "action": 2932,
+      "reward": -0.0056,
+      "next_state_summary": "Array of shape (240,), mean: 0.016198020428419113",
+      "done": false
+    },
+    {
+      "index": 128,
+      "state_summary": "Array of shape (240,), mean: 0.01503960881382227",
+      "action": 2933,
+      "reward": 0.0144,
+      "next_state_summary": "Array of shape (240,), mean: 0.0189816951751709",
+      "done": false
+    },
+    {
+      "index": 129,
+      "state_summary": "Array of shape (240,), mean: 0.0189816951751709",
+      "action": 2844,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "done": false
+    },
+    {
+      "index": 130,
+      "state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "action": 2932,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "done": false
+    },
+    {
+      "index": 131,
+      "state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "action": 2932,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "done": false
+    },
+    {
+      "index": 132,
+      "state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "action": 2932,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.014942270703613758",
+      "done": false
+    },
+    {
+      "index": 133,
+      "state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "action": 2613,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "done": false
+    },
+    {
+      "index": 134,
+      "state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "action": 2931,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "done": false
+    },
+    {
+      "index": 135,
+      "state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "action": 2931,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "done": false
+    },
+    {
+      "index": 136,
+      "state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "action": 2932,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "done": false
+    },
+    {
+      "index": 137,
+      "state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "action": 2932,
+      "reward": 0.0114,
+      "next_state_summary": "Array of shape (240,), mean: 0.019503137096762657",
+      "done": false
+    },
+    {
+      "index": 138,
+      "state_summary": "Array of shape (240,), mean: 0.01907316781580448",
+      "action": 2875,
+      "reward": -0.48109999999999997,
+      "next_state_summary": "Array of shape (240,), mean: 0.023583615198731422",
+      "done": false
+    },
+    {
+      "index": 139,
+      "state_summary": "Array of shape (240,), mean: 0.023583615198731422",
+      "action": 2903,
+      "reward": 0.0134,
+      "next_state_summary": "Array of shape (240,), mean: 0.019015999510884285",
+      "done": false
+    },
+    {
+      "index": 140,
+      "state_summary": "Array of shape (240,), mean: 0.019015999510884285",
+      "action": 2847,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "done": false
+    },
+    {
+      "index": 141,
+      "state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "action": 2931,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "done": false
+    },
+    {
+      "index": 142,
+      "state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "action": 2931,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "done": false
+    },
+    {
+      "index": 143,
+      "state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "action": 2931,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.015226190909743309",
+      "done": false
+    },
+    {
+      "index": 144,
+      "state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "action": 2691,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "done": false
+    },
+    {
+      "index": 145,
+      "state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "action": 2932,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "done": false
+    },
+    {
+      "index": 146,
+      "state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "action": 2932,
+      "reward": 0.0084,
+      "next_state_summary": "Array of shape (240,), mean: 0.01640772446990013",
+      "done": false
+    },
+    {
+      "index": 147,
+      "state_summary": "Array of shape (240,), mean: 0.016098888590931892",
+      "action": 2845,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.012169948779046535",
+      "done": false
+    },
+    {
+      "index": 148,
+      "state_summary": "Array of shape (240,), mean: 0.012169948779046535",
+      "action": 2932,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.012169948779046535",
+      "done": false
+    },
+    {
+      "index": 149,
+      "state_summary": "Array of shape (240,), mean: 0.012169948779046535",
+      "action": 2932,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.012169948779046535",
+      "done": false
+    },
+    {
+      "index": 150,
+      "state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "action": 2529,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "done": false
+    },
+    {
+      "index": 151,
+      "state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "action": 2931,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "done": false
+    },
+    {
+      "index": 152,
+      "state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "action": 2931,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "done": false
+    },
+    {
+      "index": 153,
+      "state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "action": 2932,
+      "reward": 0.0069,
+      "next_state_summary": "Array of shape (240,), mean: 0.016937097534537315",
+      "done": false
+    },
+    {
+      "index": 154,
+      "state_summary": "Array of shape (240,), mean: 0.015191408805549145",
+      "action": 2847,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "done": false
+    },
+    {
+      "index": 155,
+      "state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "action": 2931,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "done": false
+    },
+    {
+      "index": 156,
+      "state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "done": false
+    },
+    {
+      "index": 157,
+      "state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "done": false
+    },
+    {
+      "index": 158,
+      "state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.012601488269865513",
+      "done": false
+    },
+    {
+      "index": 159,
+      "state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "action": 2931,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "done": false
+    },
+    {
+      "index": 160,
+      "state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "done": false
+    },
+    {
+      "index": 161,
+      "state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "done": false
+    },
+    {
+      "index": 162,
+      "state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.013538987375795841",
+      "done": false
+    },
+    {
+      "index": 163,
+      "state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "action": 2619,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "done": false
+    },
+    {
+      "index": 164,
+      "state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "done": false
+    },
+    {
+      "index": 165,
+      "state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "action": 2932,
+      "reward": 0.0044,
+      "next_state_summary": "Array of shape (240,), mean: 0.01799067296087742",
+      "done": false
+    },
+    {
+      "index": 166,
+      "state_summary": "Array of shape (240,), mean: 0.01643470488488674",
+      "action": 2877,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 167,
+      "state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "action": 2931,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 168,
+      "state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "action": 2931,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 169,
+      "state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "action": 2931,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 170,
+      "state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "action": 2931,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 171,
+      "state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "action": 2931,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.02170097827911377",
+      "done": false
+    },
+    {
+      "index": 172,
+      "state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "action": 2712,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "done": false
+    },
+    {
+      "index": 173,
+      "state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "action": 2932,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "done": false
+    },
+    {
+      "index": 174,
+      "state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "action": 2932,
+      "reward": -0.4866,
+      "next_state_summary": "Array of shape (240,), mean: 0.026874570176005363",
+      "done": false
+    },
+    {
+      "index": 175,
+      "state_summary": "Array of shape (240,), mean: 0.025801289826631546",
+      "action": 2880,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "done": false
+    },
+    {
+      "index": 176,
+      "state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "action": 2931,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "done": false
+    },
+    {
+      "index": 177,
+      "state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "action": 2932,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "done": false
+    },
+    {
+      "index": 178,
+      "state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "action": 2932,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.029967956244945526",
+      "done": false
+    },
+    {
+      "index": 179,
+      "state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "action": 2931,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "done": false
+    },
+    {
+      "index": 180,
+      "state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "action": 2931,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "done": false
+    },
+    {
+      "index": 181,
+      "state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "action": 2931,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.03462018817663193",
+      "done": false
+    },
+    {
+      "index": 182,
+      "state_summary": "Array of shape (240,), mean: 0.035557687282562256",
+      "action": 2932,
+      "reward": -0.9761,
+      "next_state_summary": "Array of shape (240,), mean: 0.03966815024614334",
+      "done": false
+    },
+    {
+      "index": 183,
+      "state_summary": "Array of shape (240,), mean: 0.03966815024614334",
+      "action": 2932,
+      "reward": -0.4901,
+      "next_state_summary": "Array of shape (240,), mean: 0.03133481740951538",
+      "done": false
+    },
+    {
+      "index": 184,
+      "state_summary": "Array of shape (240,), mean: 0.03133481740951538",
+      "action": 2932,
+      "reward": -0.0021,
+      "next_state_summary": "Array of shape (240,), mean: 0.02300148457288742",
+      "done": false
+    },
+    {
+      "index": 185,
+      "state_summary": "Array of shape (240,), mean: 0.02300148457288742",
+      "action": 2932,
+      "reward": -50.0,
+      "next_state_summary": "Array of shape (240,), mean: 0.021022317931056023",
+      "done": true
+    }
+  ]
+}

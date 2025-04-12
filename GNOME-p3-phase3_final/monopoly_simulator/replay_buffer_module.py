@@ -328,10 +328,18 @@ def calculate_reward(player, current_gameboard):
     Returns:
         float: The calculated reward value
     """
+    # Initialize reward components
+    base_reward = 0.0
+    strategic_reward = 0.0
+    game_state_reward = 0.0
+    
     # Check if player is None or doesn't have necessary attributes
     if player is None:
         logger.warning("Player object is None. Returning default reward of 0.")
         return 0.0
+    
+    # Get player name safely for logging
+    player_name = getattr(player, 'player_name', 'unknown')
     
     # Import ddqn_decision_agent to use its reward calculation
     try:
@@ -346,111 +354,132 @@ def calculate_reward(player, current_gameboard):
     except ImportError:
         logger.warning("Could not import ddqn_decision_agent module. Using default reward calculation.")
     
-    # Verify player has necessary attributes
-    if not hasattr(player, 'current_cash'):
-        logger.warning(f"Player {getattr(player, 'player_name', 'unknown')} has no current_cash attribute. Returning default reward of 0.")
-        return 0.0
-    
-    # Base reward: Net worth calculation
-    net_worth = player.current_cash
-    property_value = 0
-    
-    # Calculate property values including houses and hotels
-    # Safely check if player.assets exists and is iterable
-    player_assets = getattr(player, 'assets', [])
-    if player_assets is None:
-        player_assets = []
-        logger.warning(f"Player {getattr(player, 'player_name', 'unknown')} has assets attribute set to None. Treating as empty list.")
-    
     try:
-        for asset in player_assets:
-            if hasattr(asset, 'price'):
-                property_value += asset.price
-                if hasattr(asset, 'num_houses') and hasattr(asset, 'price_per_house'):
-                    property_value += asset.num_houses * asset.price_per_house
-                if hasattr(asset, 'num_hotels') and asset.num_hotels > 0 and hasattr(asset, 'price_per_house'):
-                    property_value += asset.num_hotels * asset.price_per_house * 5
-    except TypeError as e:
-        logger.error(f"Error iterating through player assets: {e}. Using only cash value for net worth.")
-        # Continue with just cash as net worth
-    
-    # Calculate total net worth
-    total_net_worth = net_worth + property_value
-    
-    # Base reward normalized by a factor to keep it manageable
-    base_reward = total_net_worth / 10000.0
-    
-    # Additional rewards for strategic achievements
-    strategic_reward = 0.0
-    
-    # Reward for monopolies (owning all properties of a color group)
-    # Safely check if player has full_color_sets_possessed attribute
-    monopoly_reward = 0.0
-    if hasattr(player, 'full_color_sets_possessed'):
+        # Verify player has necessary attributes
+        if not hasattr(player, 'current_cash'):
+            logger.warning(f"Player {player_name} has no current_cash attribute. Returning default reward of 0.")
+            return 0.0
+        
+        # Base reward: Net worth calculation
+        net_worth = player.current_cash
+        property_value = 0
+        
+        # Calculate property values including houses and hotels
+        # Safely check if player.assets exists and is iterable
+        player_assets = getattr(player, 'assets', [])
+        if player_assets is None:
+            player_assets = []
+            logger.warning(f"Player {player_name} has assets attribute set to None. Treating as empty list.")
+        
         try:
-            monopoly_reward = len(player.full_color_sets_possessed) * 5.0
+            for asset in player_assets:
+                if hasattr(asset, 'price'):
+                    property_value += asset.price
+                    if hasattr(asset, 'num_houses') and hasattr(asset, 'price_per_house'):
+                        property_value += asset.num_houses * asset.price_per_house
+                    if hasattr(asset, 'num_hotels') and asset.num_hotels > 0 and hasattr(asset, 'price_per_house'):
+                        property_value += asset.num_hotels * asset.price_per_house * 5
+        except TypeError as e:
+            logger.error(f"Error iterating through player assets: {e}. Using only cash value for net worth.")
+            # Continue with just cash as net worth
+        
+        # Calculate total net worth
+        total_net_worth = net_worth + property_value
+        
+        # Base reward normalized by a factor to keep it manageable
+        base_reward = total_net_worth / 10000.0
+        
+        # Reward for monopolies (owning all properties of a color group)
+        monopoly_reward = 0.0
+        if hasattr(player, 'full_color_sets_possessed'):
+            if player.full_color_sets_possessed is None:
+                logger.warning(f"Player {player_name} has full_color_sets_possessed set to None. Assuming 0 monopolies.")
+            else:
+                try:
+                    monopoly_reward = len(player.full_color_sets_possessed) * 5.0
+                except TypeError:
+                    logger.warning(f"Player {player_name} has full_color_sets_possessed that is not iterable. Assuming 0 monopolies.")
+        strategic_reward += monopoly_reward
+        
+        # Reward for property development (houses and hotels)
+        development_reward = 0.0
+        try:
+            for asset in player_assets:
+                if hasattr(asset, 'num_houses') and asset.num_houses > 0:
+                    development_reward += asset.num_houses * 0.5
+                if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
+                    development_reward += asset.num_hotels * 3.0
         except TypeError:
-            logger.warning(f"Player {getattr(player, 'player_name', 'unknown')} has full_color_sets_possessed that is not iterable. Assuming 0 monopolies.")
-            monopoly_reward = 0.0
-    strategic_reward += monopoly_reward
-    
-    # Reward for property development (houses and hotels)
-    development_reward = 0.0
-    try:
-        for asset in player_assets:
-            if hasattr(asset, 'num_houses') and asset.num_houses > 0:
-                development_reward += asset.num_houses * 0.5
-            if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
-                development_reward += asset.num_hotels * 3.0
-    except TypeError:
-        logger.warning("Unable to calculate development reward due to asset iteration issue.")
-    strategic_reward += development_reward
-    
-    # Reward for maintaining cash reserves (liquidity)
-    liquidity_reward = 0.0
-    if player.current_cash > 500:
-        liquidity_reward = min(player.current_cash / 5000.0, 5.0)  # Cap at 5.0
-    strategic_reward += liquidity_reward
-    
-    # Penalty for mortgaged properties
-    mortgage_penalty = 0.0
-    try:
-        for asset in player_assets:
-            if hasattr(asset, 'is_mortgaged') and asset.is_mortgaged:
-                mortgage_penalty += 0.5
-    except TypeError:
-        logger.warning("Unable to calculate mortgage penalty due to asset iteration issue.")
-    strategic_reward -= mortgage_penalty
-    
-    # Game state rewards/penalties
-    game_state_reward = 0.0
-    
-    # Check if player has player_name attribute
-    player_name = getattr(player, 'player_name', None)
-    
-    # Major reward for winning
-    if player_name and 'winner' in current_gameboard and current_gameboard['winner'] == player_name:
-        game_state_reward += 100.0
-        logger.info(f"Player {player_name} WON! Adding winning bonus of 100 to reward")
-    
-    # Major penalty for losing
-    if hasattr(player, 'status') and player.status == 'lost':
-        game_state_reward -= 50.0
-        logger.info(f"Player {getattr(player, 'player_name', 'unknown')} LOST! Adding losing penalty of -50 to reward")
-    
-    # Calculate final reward
-    final_reward = base_reward + strategic_reward + game_state_reward
-    
-    logger.debug(f"Reward for {getattr(player, 'player_name', 'unknown')}: {final_reward:.2f} (Base: {base_reward:.2f}, Strategic: {strategic_reward:.2f}, Game State: {game_state_reward:.2f})")
-    
-    return final_reward
+            logger.warning(f"Unable to calculate development reward for player {player_name} due to asset iteration issue.")
+        strategic_reward += development_reward
+        
+        # Reward for maintaining cash reserves (liquidity)
+        liquidity_reward = 0.0
+        if player.current_cash > 500:
+            liquidity_reward = min(player.current_cash / 5000.0, 5.0)  # Cap at 5.0
+        strategic_reward += liquidity_reward
+        
+        # Penalty for mortgaged properties
+        mortgage_penalty = 0.0
+        try:
+            for asset in player_assets:
+                if hasattr(asset, 'is_mortgaged') and asset.is_mortgaged:
+                    mortgage_penalty += 0.5
+        except TypeError:
+            logger.warning(f"Unable to calculate mortgage penalty for player {player_name} due to asset iteration issue.")
+        strategic_reward -= mortgage_penalty
+        
+        # Game state rewards/penalties
+        
+        # Major reward for winning
+        if 'winner' in current_gameboard and current_gameboard['winner'] == player_name:
+            game_state_reward += 100.0
+            logger.info(f"Player {player_name} WON! Adding winning bonus of 100 to reward")
+        
+        # Major penalty for losing
+        if hasattr(player, 'status') and player.status == 'lost':
+            game_state_reward -= 50.0
+            logger.info(f"Player {player_name} LOST! Adding losing penalty of -50 to reward")
+        
+        # Calculate final reward
+        final_reward = base_reward + strategic_reward + game_state_reward
+        
+        logger.debug(f"Reward for {player_name}: {final_reward:.2f} (Base: {base_reward:.2f}, Strategic: {strategic_reward:.2f}, Game State: {game_state_reward:.2f})")
+        
+        return final_reward
+        
+    except Exception as e:
+        logger.warning(f"Error calculating reward for player {player_name}: {str(e)}. Falling back to simple calculation.")
+        
+        # Simple fallback reward calculation
+        try:
+            # Basic reward based on cash
+            reward = getattr(player, 'current_cash', 0) / 1000.0
+            
+            # Check if player has lost
+            if hasattr(player, 'status') and player.status == 'lost':
+                logger.info(f"Player {player_name} LOST! Adding losing penalty of -50 to reward")
+                reward -= 50.0
+                
+            # Check if player has won
+            if 'winner' in current_gameboard and current_gameboard['winner'] == player_name:
+                logger.info(f"Player {player_name} WON! Adding winning bonus of +100 to reward")
+                reward += 100.0
+                
+            logger.debug(f"Fallback reward for {player_name}: {reward:.2f}")
+            
+            return reward
+        except Exception as e:
+            # Ultimate fallback
+            logger.warning(f"Even fallback reward calculation failed for player {player_name}: {str(e)}. Returning 0.")
+            return 0.0
 
 def get_action_index(player, game_elements):
     """
     Get the action index directly from the player's last action.
     
-    This function retrieves the action index that was selected in the DDQNDecisionAgent's
-    _make_decision method.
+    This function retrieves the action index from the full 2950-action space
+    that was selected in the player's last decision.
     
     Parameters:
         player: A Player instance that performed an action
@@ -463,49 +492,66 @@ def get_action_index(player, game_elements):
         logger.warning("Player object is None. Returning default action index 0.")
         return 0
     
+    # First check if we have a stored action index directly on the player
     if hasattr(player, 'last_action_idx') and player.last_action_idx is not None:
         logger.debug(f"get_action_index: Using player's stored last_action_idx: {player.last_action_idx}")
         return player.last_action_idx
     
+    # Next check if we have a stored action index in the agent's memory
     if hasattr(player, 'agent'):
         if hasattr(player.agent, '_agent_memory') and player.agent._agent_memory is not None:
-            if 'last_action_idx' in player.agent._agent_memory:
-                logger.debug(f"get_action_index: Using last_action_idx from agent memory: {player.agent._agent_memory['last_action_idx']}")
-                return player.agent._agent_memory['last_action_idx']
+            if 'last_action_index' in player.agent._agent_memory:
+                logger.debug(f"get_action_index: Using last_action_index from agent memory: {player.agent._agent_memory['last_action_index']}")
+                return player.agent._agent_memory['last_action_index']
             
+            # Try to get the action index from the last decision
+            if hasattr(player, 'last_decision') and player.last_decision is not None:
+                if 'action_index' in player.last_decision:
+                    logger.debug(f"get_action_index: Using action_index from last_decision: {player.last_decision['action_index']}")
+                    return player.last_decision['action_index']
     
+    # If we have a last_decision with action_vector and action_mask, try to determine the index
+    if hasattr(player, 'last_decision') and player.last_decision is not None:
+        if 'action_vector' in player.last_decision and 'action_mask' in player.last_decision:
+            action_vector = player.last_decision['action_vector']
+            action_mask = player.last_decision['action_mask']
+            
+            # Find the index of the selected action
+            for i, (val, mask) in enumerate(zip(action_vector, action_mask)):
+                if val == 1 and mask:
+                    logger.debug(f"get_action_index: Determined action index from action_vector: {i}")
+                    return i
+    
+    # If we have the game_elements, try to use ActionEncoder to get the full mapping
+    if game_elements is not None:
+        try:
+            from monopoly_simulator.action_encoding import ActionEncoder
+            encoder = ActionEncoder()
+            
+            # Get the current game phase
+            game_phase = "pre_roll"  # Default
+            if 'current_player_index' in game_elements and 'phase' in game_elements:
+                game_phase = game_elements['phase']
+            
+            # Get the action name if available
+            action_name = None
+            if hasattr(player.agent, 'last_action_name'):
+                action_name = player.agent.last_action_name
+            elif hasattr(player.agent, '_agent_memory') and player.agent._agent_memory is not None:
+                action_name = player.agent._agent_memory.get('previous_action')
+            
+            # If we have an action name, find its index in the full mapping
+            if action_name:
+                full_mapping = encoder.build_full_action_mapping(player, game_elements)
+                for i, action_dict in enumerate(full_mapping):
+                    if action_dict.get('action') == action_name:
+                        logger.debug(f"get_action_index: Found action index {i} for action name {action_name}")
+                        return i
+        except Exception as e:
+            logger.error(f"Error using ActionEncoder to get action index: {e}")
     
     logger.warning(f"Could not retrieve action index for player {getattr(player, 'player_name', 'unknown')}, returning default 0.")
     return 0
-
-def get_action_mapping():
-    """
-    Get a simplified mapping from action names to action indices.
-    
-    This is used as a fallback when the full action mapping from ActionEncoder is not available.
-    
-    Returns:
-        dict: Mapping from action names to indices
-    """
-    # This is a simplified version of the action space defined in ActionEncoder
-    return {
-        "skip_turn": 0,
-        "concluded_actions": 1,
-        "buy_property": 2,
-        "mortgage_property": 3,
-        "free_mortgage": 4,
-        "improve_property": 5,
-        "reverse_improve_property": 6,
-        "accept_trade_offer": 7,
-        "decline_trade_offer": 8,
-        "make_trade_offer": 9,
-        "make_sell_property_offer": 10,
-        "sell_property": 11,
-        "sell_house_hotel": 12,
-        "pay_jail_fine": 13,
-        "use_get_out_of_jail_card": 14,
-        "roll_die": 15
-    }
 
 def add_to_replay_buffer(replay_buffer, state, player, reward, next_state, done):
     """

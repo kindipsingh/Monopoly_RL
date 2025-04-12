@@ -797,7 +797,7 @@ class DDQNDecisionAgent(Agent):
 
     def persist_replay_buffer(self):
         """Helper to easily save the replay buffer at a known location."""
-        replay_buffer_path = os.path.join("GNOME-p3-phase3_final", "monopoly_simulator", "replay_buffer.pkl")
+        replay_buffer_path = os.path.join(base_dir, "monopoly_simulator", "replay_buffer.pkl")
         self.save_replay_buffer(replay_buffer_path)
 
 ddqn_agent_instance = DDQNDecisionAgent()
