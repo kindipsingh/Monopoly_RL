@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 2025-07-29 16:25:26,969 - monopoly_simulator.gameplay_socket_phase3 - DEBUG - size of board 40
 2025-07-29 16:25:26,969 - monopoly_simulator.gameplay_socket_phase3 - DEBUG - players will play in the following order: player_4->player_2->player_3->player_1
 2025-07-29 16:25:26,970 - monopoly_simulator.gameplay_socket_phase3 - DEBUG - Beginning play. Rolling first die...
@@ -1390,3 +1391,5 @@
 2025-07-29 16:26:43,635 - monopoly_simulator.gameplay_socket_phase3 - INFO - Replay buffer saved to ../single_tournament/replay_buffer_seed_27924.pkl
 2025-07-29 16:26:43,636 - monopoly_simulator.gameplay_socket_phase3 - DEBUG - We have a winner: player_2
 2025-07-29 16:26:43,644 - monopoly_simulator.gameplay_socket_phase3 - DEBUG - Loggers cleaned up successfully
+=======
+>>>>>>> 04c59da0a0d576c7c904bd13ffd0d9a562ec3c55
