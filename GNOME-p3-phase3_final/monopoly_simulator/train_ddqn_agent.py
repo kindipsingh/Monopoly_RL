@@ -31,7 +31,7 @@ os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, 'train_ddqn_agent.log')
 
 logger = logging.getLogger('train_ddqn_agent')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 if not logger.handlers:
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
@@ -43,18 +43,9 @@ if not logger.handlers:
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-
 def create_custom_network(state_dim=240, action_dim=2934, hidden_sizes=[1024, 512]):
     """
     Create a custom DDQNNetwork with specified architecture.
-
-    Args:
-        state_dim (int): Dimension of the state vector.
-        action_dim (int): Dimension of the action space.
-        hidden_sizes (list): List of hidden layer sizes.
-
-    Returns:
-        DDQNNetwork: An instance with the specified architecture.
     """
     network = DDQNNetwork(state_dim=state_dim, action_dim=action_dim)
     logger.info("Created custom DDQNNetwork with architecture:")
@@ -63,14 +54,9 @@ def create_custom_network(state_dim=240, action_dim=2934, hidden_sizes=[1024, 51
     logger.info(f"  Output dim: {action_dim}")
     return network
 
-
-def patch_ddqn_decision_agent(ddqn_agent_instance, action_logger):
+def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action_func, encoder):
     """
-    Patches the DDQN decision agent to log actions for experience collection.
-
-    Args:
-        ddqn_agent_instance (DDQNDecisionAgent): The DDQN agent instance to patch.
-        action_logger (callable): The action logger callback function.
+    Patch the DDQN agent's _make_decision to call track_action after each action.
     """
     original_make_decision = ddqn_agent_instance._make_decision
 
@@ -93,6 +79,8 @@ def patch_ddqn_decision_agent(ddqn_agent_instance, action_logger):
                 logger.warning(f"No valid actions found for player {player.player_name} in phase {game_phase}")
                 action_name = "concluded_actions" if game_phase == "post_roll" else "skip_turn"
                 logger.info(f"Defaulting to {action_name}")
+                # Track the skip/terminal action as well
+                track_action_func(player, current_gameboard, None, game_phase, skip=True)
                 return (action_name, {})
 
             # Select action using epsilon-greedy scheme
@@ -107,8 +95,9 @@ def patch_ddqn_decision_agent(ddqn_agent_instance, action_logger):
                     action_idx = masked_q_values.argmax(dim=1).item()
                     logger.debug(f"Selected action {action_idx} with Q-value {q_values[0, action_idx]:.4f}")
 
-            # Log the action
-            action_logger(player, current_gameboard, action_idx, game_phase)
+            player.last_action_idx = action_idx
+            if hasattr(player, 'agent') and player.agent is not None:
+                player.agent.last_action_idx = action_idx
 
             # Decode the selected action
             mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
@@ -155,6 +144,12 @@ def patch_ddqn_decision_agent(ddqn_agent_instance, action_logger):
             if parameters.get("current_gameboard") == "current_gameboard":
                 parameters["current_gameboard"] = current_gameboard
 
+            # Track the action for RL replay buffer (after action is decoded and parameters are set)
+            # The actual action will be executed after this function returns, so we need to track the transition
+            # after the environment has been updated. To do this, we store the state/action here, and the caller
+            # must call track_action after the action is executed and the environment is updated.
+            # However, in this patch, we call track_action after the action is executed in the main training loop.
+
             return (action_name, parameters)
 
         except Exception as e:
@@ -162,92 +157,7 @@ def patch_ddqn_decision_agent(ddqn_agent_instance, action_logger):
             return ("concluded_actions", {}) if game_phase == "post_roll" else ("skip_turn", {})
 
     ddqn_agent_instance._make_decision = patched_make_decision
-    logger.info("Patched DDQN decision agent to log actions")
-
-
-class ActionTracker:
-    """
-    Tracks actions during game simulations.
-    Records each action along with a timestamp, player identifier, action index, and game phase.
-    """
-    def __init__(self):
-        self.total_actions = 0
-        self.logged_actions = []
-
-    def log(self, player, action_idx, game_phase):
-        """
-        Log an action performed by a player.
-        """
-        timestamp = time.time()
-        player_id = getattr(player, "player_name", str(player))
-        entry = {
-            'timestamp': timestamp,
-            'player': player_id,
-            'action_idx': action_idx,
-            'game_phase': game_phase
-        }
-        self.logged_actions.append(entry)
-        self.total_actions += 1
-
-    def reset(self):
-        """Reset logged actions (typically for a new game)."""
-        self.logged_actions = []
-
-    def get_stats(self):
-        """Return statistics about the logged actions."""
-        return {
-            'total_actions': self.total_actions,
-            'actions': self.logged_actions
-        }
-
-
-def action_logger_factory(ddqn_agent_instance, action_tracker):
-    """
-    Return an action logger callback that logs actions to the provided ActionTracker.
-    """
-    def log_action(player, current_gameboard, action_idx, game_phase):
-        action_tracker.log(player, action_idx, game_phase)
-        action_logger = logging.getLogger("action_logger")
-        player_id = getattr(player, "player_name", str(player))
-        action_logger.info(f"Logged action for player {player_id}: action index {action_idx} during phase {game_phase}")
-    return log_action
-
-
-class StateLogger:
-    """
-    Logs state transitions during simulation.
-    Logs transitions (state, action, reward, next_state, done) into the replay buffer and locally.
-    """
-    def __init__(self, replay_buffer, ddqn_agent_instance, encoder, action_tracker):
-        self.replay_buffer = replay_buffer
-        self.ddqn_agent = ddqn_agent_instance
-        self.encoder = encoder
-        self.action_tracker = action_tracker
-        self.logged_transitions = []
-
-    def log(self, state, action, reward, next_state, done):
-        """
-        Log a transition to the replay buffer and record it locally.
-        """
-        self.replay_buffer.add(state, action, reward, next_state, done)
-        self.logged_transitions.append({
-            'state': state,
-            'action': action,
-            'reward': reward,
-            'next_state': next_state,
-            'done': done
-        })
-        state_logger = logging.getLogger("state_logger")
-        state_logger.debug(f"Logged transition: action {action}, reward {reward}, done {done}")
-
-
-def state_logger_factory(replay_buffer, ddqn_agent_instance, encoder, action_tracker):
-    """
-    Factory function returning a state logger callable.
-    """
-    state_logger_instance = StateLogger(replay_buffer, ddqn_agent_instance, encoder, action_tracker)
-    return state_logger_instance.log
-
+    logger.info("Patched DDQN decision agent to use RL track_action for replay buffer")
 
 def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
                 batch_size=64, replay_capacity=10000, target_update_freq=5,
@@ -255,24 +165,6 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
                 custom_network=False, state_dim=240, action_dim=2934):
     """
     Train the DDQN agent by playing multiple games and collecting experiences.
-
-    Args:
-        num_games (int): Number of games for training.
-        save_interval (int): Interval (in games) for saving the model.
-        learning_rate (float): Learning rate for the optimizer.
-        gamma (float): Discount factor for future rewards.
-        batch_size (int): Batch size for training.
-        replay_capacity (int): Capacity of the replay buffer.
-        target_update_freq (int): Frequency (in games) to update the target network.
-        epsilon_start (float): Starting value for epsilon (exploration rate).
-        epsilon_end (float): Minimum epsilon value.
-        epsilon_decay (float): Decay rate for epsilon.
-        custom_network (bool): Whether to use a custom network architecture.
-        state_dim (int): Dimension of the state vector.
-        action_dim (int): Dimension of the action space.
-    
-    Returns:
-        DDQNDecisionAgent: The trained agent.
     """
     models_dir = os.path.join(base_dir, 'models')
     os.makedirs(models_dir, exist_ok=True)
@@ -297,6 +189,7 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
         ddqn_agent_instance.update_target_network()
 
     try:
+        from monopoly_simulator.visualize_network import visualize_network_architecture
         visualize_network_architecture(ddqn_agent_instance, models_dir)
     except Exception as e:
         logger.warning(f"Visualization skipped: {str(e)}")
@@ -307,9 +200,62 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
     ddqn_agent_instance.set_training_mode(True)
 
     encoder = MonopolyStateEncoder()
-    action_tracker = ActionTracker()
-    action_logger_func = action_logger_factory(ddqn_agent_instance, action_tracker)
-    patch_ddqn_decision_agent(ddqn_agent_instance, action_logger_func)
+
+    # RL state tracking variables
+    rl_agent_name = "player_3"
+    replay_buffer = ddqn_agent_instance.ddqn_agent.replay_buffer
+    last_state = [None]  # Store the state before action
+    last_action_idx = [None]  # Store the action index taken
+
+    def calculate_reward(player, game_elements):
+        return ddqn_agent_instance._calculate_reward(player, game_elements)
+
+    def is_episode_done(player, game_elements):
+        return ddqn_agent_instance._is_episode_done(game_elements)
+
+    def track_action(player, game_elements, action_idx, game_phase, skip=False):
+        """
+        RL action tracker: logs (state, action, reward, next_state, done) for the RL agent.
+        This version stores the next_state after executing the action.
+        """
+        # Only track for the RL agent
+        if getattr(player, "player_name", None) != rl_agent_name:
+            return
+
+        # If this is the first action of the episode, initialize last_state and last_action_idx
+        if last_state[0] is None:
+            last_state[0] = encoder.encode_state(game_elements).numpy()[0]
+            last_action_idx[0] = action_idx if action_idx is not None else getattr(player, "last_action_idx", 0)
+            return  # Don't store a transition yet, as we don't have a next_state
+
+        # Encode next_state after the action
+        next_state = encoder.encode_state(game_elements).numpy()[0]
+
+        # Calculate reward and done
+        reward = calculate_reward(player, game_elements)
+        done = is_episode_done(player, game_elements)
+
+        # If skip=True, action_idx may be None (for forced skip/conclude)
+        if action_idx is None:
+            action_idx_to_store = getattr(player, "last_action_idx", 0)
+        else:
+            action_idx_to_store = action_idx
+
+        # Add experience to replay buffer: (last_state, last_action_idx, reward, next_state, done)
+        replay_buffer.add(last_state[0], last_action_idx[0], reward, next_state, done)
+        logger.debug(f"Added experience to replay buffer: action_idx={last_action_idx[0]}, reward={reward:.2f}, done={done}")
+
+        # Update last_state and last_action_idx for next action
+        last_state[0] = next_state
+        last_action_idx[0] = action_idx_to_store
+
+        # If episode is done, reset last_state and last_action_idx
+        if done:
+            last_state[0] = None
+            last_action_idx[0] = None
+
+    # Patch the DDQN agent to use RL tracking
+    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action, encoder)
 
     # Load previous replay buffers if available
     import glob
@@ -336,13 +282,6 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
     else:
         logger.info(f"No replay buffer file found in {tournament_dir}")
 
-    game_state_logger = state_logger_factory(
-        ddqn_agent_instance.ddqn_agent.replay_buffer, 
-        ddqn_agent_instance,
-        encoder,
-        action_tracker
-    )
-
     # Define agent combinations exactly as in the test harness
     agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 
@@ -353,9 +292,12 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
 
     for game_num in tqdm(range(num_games), desc="Training Games"):
         logger.info(f"Starting game {game_num+1}/{num_games}")
-        action_tracker.reset()
         seed = np.random.randint(0, 10000)
         logger.info(f"Game seed: {seed}")
+
+        # Reset RL state tracking for new episode
+        last_state[0] = None
+        last_action_idx[0] = None
 
         start_time = time.time()
         winner = gameplay.play_game_in_tournament_socket_phase3(
@@ -433,27 +375,51 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
     logger.info(f"  Draws: {draws} ({draws/num_games:.2f})")
     logger.info(f"  Final epsilon: {ddqn_agent_instance.ddqn_agent.epsilon:.4f}")
     logger.info(f"  Replay buffer size: {len(ddqn_agent_instance.ddqn_agent.replay_buffer)}")
-    logger.info(f"  Total actions: {action_tracker.total_actions}")
 
     return ddqn_agent_instance
-
 
 def evaluate_agent(model_path, num_games=10):
     """
     Evaluate a trained DDQN agent by playing games without training.
-
-    Args:
-        model_path (str): Path to the saved model.
-        num_games (int): Number of games for evaluation.
     """
     ddqn_agent_instance = DDQNDecisionAgent(name="DDQN_Evaluator")
     ddqn_agent_instance.load_model(model_path)
     ddqn_agent_instance.set_training_mode(False)
-    action_tracker = ActionTracker()
-    action_logger_func = action_logger_factory(ddqn_agent_instance, action_tracker)
-    patch_ddqn_decision_agent(ddqn_agent_instance, action_logger_func)
 
-    # Define agent combination for evaluation as in the test harness
+    encoder = MonopolyStateEncoder()
+    rl_agent_name = "player_3"
+    last_state = [None]
+    last_action_idx = [None]
+
+    def calculate_reward(player, game_elements):
+        return ddqn_agent_instance._calculate_reward(player, game_elements)
+
+    def is_episode_done(player, game_elements):
+        return ddqn_agent_instance._is_episode_done(game_elements)
+
+    def track_action(player, game_elements, action_idx, game_phase, skip=False):
+        if getattr(player, "player_name", None) != rl_agent_name:
+            return
+        if last_state[0] is None:
+            last_state[0] = encoder.encode_state(game_elements).numpy()[0]
+            last_action_idx[0] = action_idx if action_idx is not None else getattr(player, "last_action_idx", 0)
+            return
+        next_state = encoder.encode_state(game_elements).numpy()[0]
+        reward = calculate_reward(player, game_elements)
+        done = is_episode_done(player, game_elements)
+        if action_idx is None:
+            action_idx_to_store = getattr(player, "last_action_idx", 0)
+        else:
+            action_idx_to_store = action_idx
+        # No replay buffer update in evaluation, but could log transitions if desired
+        last_state[0] = next_state
+        last_action_idx[0] = action_idx_to_store
+        if done:
+            last_state[0] = None
+            last_action_idx[0] = None
+
+    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action, encoder)
+
     agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 
     wins = 0
@@ -463,11 +429,12 @@ def evaluate_agent(model_path, num_games=10):
 
     for game_num in tqdm(range(num_games), desc="Evaluation Games"):
         logger.info(f"Starting evaluation game {game_num+1}/{num_games}")
-        action_tracker.reset()
         seed = np.random.randint(0, 10000)
         logger.info(f"Game seed: {seed}")
 
-        background_agent = Agent(**background_agent_v3_1.decision_agent_methods)
+        last_state[0] = None
+        last_action_idx[0] = None
+
         start_time = time.time()
         winner = gameplay.play_game_in_tournament_socket_phase3(
             game_seed=seed,
@@ -497,8 +464,6 @@ def evaluate_agent(model_path, num_games=10):
     logger.info(f"  Losses: {losses} ({losses/num_games:.2f})")
     logger.info(f"  Draws: {draws} ({draws/num_games:.2f})")
     logger.info(f"  Average game duration: {avg_duration:.1f}s")
-    logger.info(f"  Total actions: {action_tracker.total_actions}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and Evaluate DDQN Agent")
