@@ -134,6 +134,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     from monopoly_simulator.action_encoding import ActionEncoder
     
     # Initialize replay buffer for player_3 (RL agent)
+    encoder = MonopolyStateEncoder()
     rl_agent_name = 'player_3'
     replay_buffer = ReplayBuffer(capacity=100000)  # Adjust capacity as needed
     
@@ -143,71 +144,35 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     # Initialize the action encoder for building the full action mapping
     action_encoder = ActionEncoder()
     
-    # Variables to track state and action for the RL agent
-    current_state = None
-    episode_done = False
-    
     # Create a function to track individual actions for the RL agent
-    def track_action(player, action_name, game_elements):
-        nonlocal current_state
-        
-        if player.player_name != rl_agent_name or current_state is None:
-            return
-            
-        # Encode the state after the action
-        next_state = encoder.encode_state(game_elements).numpy()[0]
-        
-        # Calculate reward
-        reward = calculate_reward(player, game_elements)
-        
-        # Check if episode is done
-        done = is_episode_done(player, game_elements)
-        
-        # Get the action index from the full mapping
-        action_idx = get_action_index(player, game_elements)
-        
-        # Store the action in the player for debugging
-        player.last_action_name = action_name
-        
-        # Add experience to replay buffer
-        replay_buffer.add(current_state, action_idx, reward, next_state, done)
-        logger.debug(f"Added individual action experience to replay buffer for {rl_agent_name}, action: {action_name} (idx: {action_idx}), reward: {reward:.2f}")
-        
-        # Update current state for next action
-        current_state = next_state
-        
-        # If episode is done, reset current state
-        if done:
-            current_state = None
-            nonlocal episode_done
-            episode_done = True
     
+    def track_action(current_state, action_idx, reward, next_state, done):
+       replay_buffer.add(current_state, action_idx, reward, next_state, done)
+       logger.debug(f"Added to replay buffer: action_idx={action_idx}, reward={reward:.2f}, done={done}")
+
     # Monkey patch the _execute_action method of Player to track actions
     original_execute_action = player.Player._execute_action
     
     def execute_action_with_tracking(self, action_to_execute, parameters, current_gameboard):
-        # Get the action name (function name)
-        action_name = action_to_execute.__name__ if callable(action_to_execute) else action_to_execute
-        
-        # Log the action before execution
-        logger.debug(f"Player {self.player_name} executing action: {action_name}")
-        
-        # If this is the RL agent and we have a current state, capture the state before action
-        if self.player_name == rl_agent_name and not episode_done:
-            nonlocal current_state
-            if current_state is None:
-                current_state = encoder.encode_state(current_gameboard).numpy()[0]
-        
-        # Execute the original action
-        result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
-        
-        # Track the action for the RL agent if it's a meaningful action
-        if self.player_name == rl_agent_name and not episode_done:
-            # Build the full action mapping to get the correct index
-            track_action(self, action_name, current_gameboard)
-        
-        return result
-    
+    # Only track for RL agent
+     if self.player_name == rl_agent_name:
+        current_state = encoder.encode_state(current_gameboard).numpy()[0]
+     else:
+        current_state = None
+
+    # Execute the original action
+     result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
+
+     if self.player_name == rl_agent_name:
+        next_state = encoder.encode_state(current_gameboard).numpy()[0]
+        from monopoly_simulator.replay_buffer_module import calculate_reward, get_action_index, is_episode_done
+        reward = calculate_reward(self, current_gameboard)
+        done = is_episode_done(self, current_gameboard)
+        action_idx = get_action_index(self, current_gameboard)
+        track_action(current_state, action_idx, reward, next_state, done)
+
+     return result
+
     # Apply the monkey patch
     player.Player._execute_action = execute_action_with_tracking
     
@@ -270,10 +235,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         vector_logger.log_pre_roll(current_player, game_elements)
         
         # If this was the RL agent's turn and the last action was a conclude action, record it
-        if current_player.player_name == rl_agent_name and current_state is not None:
+        #if current_player.player_name == rl_agent_name and current_state is not None:
             # Only add the conclude action if it wasn't already added by the tracking function
-            if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
-                track_action(current_player, 'concluded_actions', game_elements)
+        #    if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
+        #        track_action(current_player, 'concluded_actions', game_elements)
         
         if pre_roll_code == 2:
             skip_turn += 1
@@ -312,10 +277,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             vector_logger.log_out_of_turn(out_of_turn_player, game_elements)
             
             # If this was the RL agent's turn and the last action was a skip action, record it
-            if out_of_turn_player.player_name == rl_agent_name and current_state is not None:
-                # Only add the skip action if it wasn't already added by the tracking function
-                if not hasattr(out_of_turn_player, 'last_action_name') or out_of_turn_player.last_action_name != 'skip_turn':
-                    track_action(out_of_turn_player, 'skip_turn', game_elements)
+            #if out_of_turn_player.player_name == rl_agent_name and current_state is not None:
+               # Only add the skip action if it wasn't already added by the tracking function
+            #    if not hasattr(out_of_turn_player, 'last_action_name') or out_of_turn_player.last_action_name != 'skip_turn':
+            #        track_action(out_of_turn_player, 'skip_turn', game_elements)
             
             if state_logger:
                 state_logger(game_elements.copy())
@@ -334,8 +299,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         logger.debug('dice have come up: ' + str(r))
         
         # If this is the RL agent's turn, record the roll_die action
-        if current_player.player_name == rl_agent_name and current_state is not None:
-            track_action(current_player, 'roll_die', game_elements)
+        #if current_player.player_name == rl_agent_name and current_state is not None:
+        #    track_action(current_player, 'roll_die', game_elements)
         
         if state_logger:
             state_logger(copy.deepcopy(game_elements))
@@ -370,10 +335,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             vector_logger.log_post_roll(current_player, game_elements)
             
             # If this was the RL agent's turn and the last action was a conclude action, record it
-            if current_player.player_name == rl_agent_name and current_state is not None:
-                # Only add the conclude action if it wasn't already added by the tracking function
-                if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
-                    track_action(current_player, 'concluded_actions', game_elements)
+            #if current_player.player_name == rl_agent_name and current_state is not None:
+            #    # Only add the conclude action if it wasn't already added by the tracking function
+            #    if not hasattr(current_player, 'last_action_name') or current_player.last_action_name != 'concluded_actions':
+            #        track_action(current_player, 'concluded_actions', game_elements)
             
             if state_logger:
                 state_logger(copy.deepcopy(game_elements))

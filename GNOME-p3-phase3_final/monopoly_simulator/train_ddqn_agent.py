@@ -54,9 +54,9 @@ def create_custom_network(state_dim=240, action_dim=2934, hidden_sizes=[1024, 51
     logger.info(f"  Output dim: {action_dim}")
     return network
 
-def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action_func, encoder):
+def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder):
     """
-    Patch the DDQN agent's _make_decision to call track_action after each action.
+    Patch the DDQN agent's _make_decision to select and return actions (no tracking).
     """
     original_make_decision = ddqn_agent_instance._make_decision
 
@@ -79,8 +79,6 @@ def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action_func,
                 logger.warning(f"No valid actions found for player {player.player_name} in phase {game_phase}")
                 action_name = "concluded_actions" if game_phase == "post_roll" else "skip_turn"
                 logger.info(f"Defaulting to {action_name}")
-                # Track the skip/terminal action as well
-                track_action_func(player, current_gameboard, None, game_phase, skip=True)
                 return (action_name, {})
 
             # Select action using epsilon-greedy scheme
@@ -144,12 +142,6 @@ def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action_func,
             if parameters.get("current_gameboard") == "current_gameboard":
                 parameters["current_gameboard"] = current_gameboard
 
-            # Track the action for RL replay buffer (after action is decoded and parameters are set)
-            # The actual action will be executed after this function returns, so we need to track the transition
-            # after the environment has been updated. To do this, we store the state/action here, and the caller
-            # must call track_action after the action is executed and the environment is updated.
-            # However, in this patch, we call track_action after the action is executed in the main training loop.
-
             return (action_name, parameters)
 
         except Exception as e:
@@ -157,7 +149,7 @@ def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action_func,
             return ("concluded_actions", {}) if game_phase == "post_roll" else ("skip_turn", {})
 
     ddqn_agent_instance._make_decision = patched_make_decision
-    logger.info("Patched DDQN decision agent to use RL track_action for replay buffer")
+    logger.info("Patched DDQN decision agent to use custom _make_decision (no tracking)")
 
 def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
                 batch_size=64, replay_capacity=10000, target_update_freq=5,
@@ -200,62 +192,7 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
     ddqn_agent_instance.set_training_mode(True)
 
     encoder = MonopolyStateEncoder()
-
-    # RL state tracking variables
-    rl_agent_name = "player_3"
-    replay_buffer = ddqn_agent_instance.ddqn_agent.replay_buffer
-    last_state = [None]  # Store the state before action
-    last_action_idx = [None]  # Store the action index taken
-
-    def calculate_reward(player, game_elements):
-        return ddqn_agent_instance._calculate_reward(player, game_elements)
-
-    def is_episode_done(player, game_elements):
-        return ddqn_agent_instance._is_episode_done(game_elements)
-
-    def track_action(player, game_elements, action_idx, game_phase, skip=False):
-        """
-        RL action tracker: logs (state, action, reward, next_state, done) for the RL agent.
-        This version stores the next_state after executing the action.
-        """
-        # Only track for the RL agent
-        if getattr(player, "player_name", None) != rl_agent_name:
-            return
-
-        # If this is the first action of the episode, initialize last_state and last_action_idx
-        if last_state[0] is None:
-            last_state[0] = encoder.encode_state(game_elements).numpy()[0]
-            last_action_idx[0] = action_idx if action_idx is not None else getattr(player, "last_action_idx", 0)
-            return  # Don't store a transition yet, as we don't have a next_state
-
-        # Encode next_state after the action
-        next_state = encoder.encode_state(game_elements).numpy()[0]
-
-        # Calculate reward and done
-        reward = calculate_reward(player, game_elements)
-        done = is_episode_done(player, game_elements)
-
-        # If skip=True, action_idx may be None (for forced skip/conclude)
-        if action_idx is None:
-            action_idx_to_store = getattr(player, "last_action_idx", 0)
-        else:
-            action_idx_to_store = action_idx
-
-        # Add experience to replay buffer: (last_state, last_action_idx, reward, next_state, done)
-        replay_buffer.add(last_state[0], last_action_idx[0], reward, next_state, done)
-        logger.debug(f"Added experience to replay buffer: action_idx={last_action_idx[0]}, reward={reward:.2f}, done={done}")
-
-        # Update last_state and last_action_idx for next action
-        last_state[0] = next_state
-        last_action_idx[0] = action_idx_to_store
-
-        # If episode is done, reset last_state and last_action_idx
-        if done:
-            last_state[0] = None
-            last_action_idx[0] = None
-
-    # Patch the DDQN agent to use RL tracking
-    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action, encoder)
+    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder)
 
     # Load previous replay buffers if available
     import glob
@@ -294,10 +231,6 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
         logger.info(f"Starting game {game_num+1}/{num_games}")
         seed = np.random.randint(0, 10000)
         logger.info(f"Game seed: {seed}")
-
-        # Reset RL state tracking for new episode
-        last_state[0] = None
-        last_action_idx[0] = None
 
         start_time = time.time()
         winner = gameplay.play_game_in_tournament_socket_phase3(
@@ -391,34 +324,7 @@ def evaluate_agent(model_path, num_games=10):
     last_state = [None]
     last_action_idx = [None]
 
-    def calculate_reward(player, game_elements):
-        return ddqn_agent_instance._calculate_reward(player, game_elements)
-
-    def is_episode_done(player, game_elements):
-        return ddqn_agent_instance._is_episode_done(game_elements)
-
-    def track_action(player, game_elements, action_idx, game_phase, skip=False):
-        if getattr(player, "player_name", None) != rl_agent_name:
-            return
-        if last_state[0] is None:
-            last_state[0] = encoder.encode_state(game_elements).numpy()[0]
-            last_action_idx[0] = action_idx if action_idx is not None else getattr(player, "last_action_idx", 0)
-            return
-        next_state = encoder.encode_state(game_elements).numpy()[0]
-        reward = calculate_reward(player, game_elements)
-        done = is_episode_done(player, game_elements)
-        if action_idx is None:
-            action_idx_to_store = getattr(player, "last_action_idx", 0)
-        else:
-            action_idx_to_store = action_idx
-        # No replay buffer update in evaluation, but could log transitions if desired
-        last_state[0] = next_state
-        last_action_idx[0] = action_idx_to_store
-        if done:
-            last_state[0] = None
-            last_action_idx[0] = None
-
-    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, track_action, encoder)
+    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder)
 
     agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 
