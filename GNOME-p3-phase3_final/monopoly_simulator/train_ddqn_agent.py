@@ -54,109 +54,13 @@ def create_custom_network(state_dim=240, action_dim=2934, hidden_sizes=[1024, 51
     logger.info(f"  Output dim: {action_dim}")
     return network
 
-def patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder):
-    """
-    Patch the DDQN agent's _make_decision to select and return actions (no tracking).
-    """
-    original_make_decision = ddqn_agent_instance._make_decision
-
-    def patched_make_decision(player, current_gameboard, game_phase):
-        try:
-            # Create state vector and tensor
-            state_vector = ddqn_agent_instance.state_encoder.encode_state(current_gameboard)
-            state_tensor = state_vector.to(ddqn_agent_instance.device)
-
-            # Build full action mapping
-            action_encoder = ActionEncoder()
-            full_mapping = action_encoder.build_full_action_mapping(player, current_gameboard)
-
-            # Get valid actions using the mask
-            action_mask = create_action_mask(player, current_gameboard, game_phase)
-            mask_tensor = torch.BoolTensor(action_mask).to(ddqn_agent_instance.device)
-            valid_action_indices = np.where(action_mask)[0]
-
-            if len(valid_action_indices) == 0:
-                logger.warning(f"No valid actions found for player {player.player_name} in phase {game_phase}")
-                action_name = "concluded_actions" if game_phase == "post_roll" else "skip_turn"
-                logger.info(f"Defaulting to {action_name}")
-                return (action_name, {})
-
-            # Select action using epsilon-greedy scheme
-            if ddqn_agent_instance.training_mode and random.random() < ddqn_agent_instance.ddqn_agent.epsilon:
-                action_idx = np.random.choice(valid_action_indices)
-                logger.debug(f"Selected random action {action_idx} (epsilon={ddqn_agent_instance.ddqn_agent.epsilon:.2f})")
-            else:
-                with torch.no_grad():
-                    q_values = ddqn_agent_instance.ddqn_agent.policy_net(state_tensor)
-                    masked_q_values = q_values.clone()
-                    masked_q_values[0, ~mask_tensor] = float('-inf')
-                    action_idx = masked_q_values.argmax(dim=1).item()
-                    logger.debug(f"Selected action {action_idx} with Q-value {q_values[0, action_idx]:.4f}")
-
-            player.last_action_idx = action_idx
-            if hasattr(player, 'agent') and player.agent is not None:
-                player.agent.last_action_idx = action_idx
-
-            # Decode the selected action
-            mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
-            action_name = mapping.get("action")
-            parameters = mapping.get("parameters", {})
-            logger.debug(f"Decoded action: {action_name} with parameters: {parameters}")
-
-            # Process special parameters such as "to_player"
-            if "to_player" in parameters and isinstance(parameters["to_player"], str):
-                target_name = parameters["to_player"]
-                target_player = next((p for p in current_gameboard.get("players", [])
-                                      if getattr(p, "player_name", None) == target_name), None)
-                if target_player is None:
-                    logger.error(f"Target player '{target_name}' not found in the current gameboard.")
-                    return ("concluded_actions", {}) if game_phase == "post_roll" else ("skip_turn", {})
-                parameters["to_player"] = target_player
-
-            # Handle trade offers
-            if action_name == "make_trade_offer":
-                offer = parameters.get("offer")
-                if offer is not None:
-                    raw_offer = offer.copy()
-                    logger.debug(f"Trade offer before conversion: {raw_offer}")
-                    from monopoly_simulator import action_validator
-                    converted_offer = action_validator.convert_cash_values(raw_offer, current_gameboard, logger)
-                    converted_offer = action_validator.convert_offer_properties(converted_offer, current_gameboard, logger)
-                    parameters["offer"] = converted_offer
-                    logger.debug(f"Trade offer after conversion: {parameters['offer']}")
-
-            # Validate property-related actions
-            from monopoly_simulator import action_validator
-            if action_name == "sell_property":
-                parameters = action_validator.validate_sell_property(parameters, current_gameboard, logger)
-            elif action_name == "make_sell_property_offer":
-                parameters = action_validator.validate_make_sell_property_offer(parameters, current_gameboard, logger)
-            elif action_name == "sell_house_hotel":
-                parameters = action_validator.validate_sell_house_hotel_asset(parameters, current_gameboard, logger)
-            elif action_name in ["improve_property", "reverse_improve_property"]:
-                parameters = action_validator.validate_improve_property(parameters, current_gameboard, logger)
-            elif action_name in ["free_mortgage", "mortgage_property"]:
-                parameters = action_validator.validate_free_mortgage(parameters, current_gameboard, logger)
-
-            # Replace marker strings if necessary
-            if parameters.get("current_gameboard") == "current_gameboard":
-                parameters["current_gameboard"] = current_gameboard
-
-            return (action_name, parameters)
-
-        except Exception as e:
-            logger.error(f"Error in patched_make_decision: {str(e)}", exc_info=True)
-            return ("concluded_actions", {}) if game_phase == "post_roll" else ("skip_turn", {})
-
-    ddqn_agent_instance._make_decision = patched_make_decision
-    logger.info("Patched DDQN decision agent to use custom _make_decision (no tracking)")
-
 def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
                 batch_size=64, replay_capacity=10000, target_update_freq=5,
                 epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995,
                 custom_network=False, state_dim=240, action_dim=2934):
     """
     Train the DDQN agent by playing multiple games and collecting experiences.
+    All RL training and backprop is handled inside gameplay_socket_phase3.py.
     """
     models_dir = os.path.join(base_dir, 'models')
     os.makedirs(models_dir, exist_ok=True)
@@ -180,52 +84,16 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
         ddqn_agent_instance.ddqn_agent.target_net = target_net
         ddqn_agent_instance.update_target_network()
 
-    try:
-        from monopoly_simulator.visualize_network import visualize_network_architecture
-        visualize_network_architecture(ddqn_agent_instance, models_dir)
-    except Exception as e:
-        logger.warning(f"Visualization skipped: {str(e)}")
-
     ddqn_agent_instance.ddqn_agent.epsilon = epsilon_start
     ddqn_agent_instance.ddqn_agent.epsilon_min = epsilon_end
     ddqn_agent_instance.ddqn_agent.epsilon_decay = epsilon_decay
     ddqn_agent_instance.set_training_mode(True)
 
-    encoder = MonopolyStateEncoder()
-    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder)
-
-    # Load previous replay buffers if available
-    import glob
-    tournament_dir = os.path.join(base_dir, "single_tournament")
-    replay_files = glob.glob(os.path.join(tournament_dir, "replay_buffer_seed_*.pkl"))
-    combined_buffer = []
-    combined_episode_rewards = []
-
-    if replay_files:
-        logger.info(f"Found {len(replay_files)} replay buffer files in {tournament_dir}")
-        for rf in replay_files:
-            logger.info(f"Loading replay buffer file: {rf}")
-            with open(rf, "rb") as f:
-                data = pickle.load(f)
-            if isinstance(data, dict):
-                combined_buffer.extend(data.get('buffer', []))
-                combined_episode_rewards.extend(data.get('episode_rewards', []))
-            else:
-                combined_buffer.extend(data)
-        ddqn_agent_instance.ddqn_agent.replay_buffer.buffer = combined_buffer
-        ddqn_agent_instance.ddqn_agent.replay_buffer.episode_rewards = combined_episode_rewards
-        ddqn_agent_instance.ddqn_agent.replay_buffer.position = len(combined_buffer) % ddqn_agent_instance.ddqn_agent.replay_buffer.capacity
-        logger.info(f"Combined replay buffer loaded from {len(replay_files)} files with {len(combined_buffer)} transitions")
-    else:
-        logger.info(f"No replay buffer file found in {tournament_dir}")
-
-    # Define agent combinations exactly as in the test harness
     agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 
     wins = 0
     losses = 0
     draws = 0
-    training_losses = []
 
     for game_num in tqdm(range(num_games), desc="Training Games"):
         logger.info(f"Starting game {game_num+1}/{num_games}")
@@ -254,47 +122,12 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
         logger.info(f"Game {game_num+1} complete in {game_duration:.1f}s. Winner: {winner}. Win rate: {win_rate:.2f}")
         logger.info(f"Epsilon: {ddqn_agent_instance.ddqn_agent.epsilon:.4f}, Replay buffer size: {len(ddqn_agent_instance.ddqn_agent.replay_buffer)}")
 
-        if len(ddqn_agent_instance.ddqn_agent.replay_buffer) >= ddqn_agent_instance.ddqn_agent.batch_size:
-            num_batches = min(10, len(ddqn_agent_instance.ddqn_agent.replay_buffer) // ddqn_agent_instance.ddqn_agent.batch_size)
-            batch_losses = []
-            for _ in range(num_batches):
-                loss = ddqn_agent_instance.train()
-                if loss is not None:
-                    batch_losses.append(loss)
-            if batch_losses:
-                avg_loss = sum(batch_losses) / len(batch_losses)
-                training_losses.append(avg_loss)
-                logger.info(f"Post-game training: avg loss over {num_batches} batches: {avg_loss:.6f}")
-
-        if ddqn_agent_instance.ddqn_agent.epsilon > ddqn_agent_instance.ddqn_agent.epsilon_min:
-            ddqn_agent_instance.ddqn_agent.epsilon *= ddqn_agent_instance.ddqn_agent.epsilon_decay
-            logger.debug(f"Decayed epsilon to {ddqn_agent_instance.ddqn_agent.epsilon:.4f}")
-
-        if (game_num + 1) % target_update_freq == 0:
-            ddqn_agent_instance.update_target_network()
-            logger.info(f"Updated target network after game {game_num+1}")
-
         if (game_num + 1) % save_interval == 0:
             model_path = os.path.join(models_dir, f"ddqn_model_game_{game_num+1}.pth")
             ddqn_agent_instance.save_model(model_path)
             logger.info(f"Saved model to {model_path}")
             ddqn_agent_instance.persist_replay_buffer()
             logger.info(f"Saved replay buffer after game {game_num+1}")
-            if training_losses:
-                try:
-                    import matplotlib.pyplot as plt
-                    plt.figure(figsize=(10, 6))
-                    plt.plot(training_losses)
-                    plt.title('Training Loss')
-                    plt.xlabel('Training Batch')
-                    plt.ylabel('Loss')
-                    plt.grid(True)
-                    loss_plot_path = os.path.join(models_dir, f"training_loss_game_{game_num+1}.png")
-                    plt.savefig(loss_plot_path)
-                    plt.close()
-                    logger.info(f"Saved training loss plot to {loss_plot_path}")
-                except Exception as e:
-                    logger.warning(f"Could not plot training losses: {str(e)}")
 
     final_model_path = os.path.join(models_dir, "ddqn_model_final.pth")
     ddqn_agent_instance.save_model(final_model_path)
@@ -319,13 +152,6 @@ def evaluate_agent(model_path, num_games=10):
     ddqn_agent_instance.load_model(model_path)
     ddqn_agent_instance.set_training_mode(False)
 
-    encoder = MonopolyStateEncoder()
-    rl_agent_name = "player_3"
-    last_state = [None]
-    last_action_idx = [None]
-
-    patch_ddqn_decision_agent_with_track(ddqn_agent_instance, encoder)
-
     agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
 
     wins = 0
@@ -337,9 +163,6 @@ def evaluate_agent(model_path, num_games=10):
         logger.info(f"Starting evaluation game {game_num+1}/{num_games}")
         seed = np.random.randint(0, 10000)
         logger.info(f"Game seed: {seed}")
-
-        last_state[0] = None
-        last_action_idx[0] = None
 
         start_time = time.time()
         winner = gameplay.play_game_in_tournament_socket_phase3(

@@ -46,7 +46,6 @@ if not rl_logger.handlers:
 ##############################################################
 
 logger = logging.getLogger('monopoly_simulator.logging_info.ddqn_decision_agent')
-
 global_ddqn_agent = None
 
 class DDQNDecisionAgent(Agent):
@@ -59,7 +58,7 @@ class DDQNDecisionAgent(Agent):
     - DDQN network to predict Q-values for each possible action
     - ActionEncoder to decode the selected action index into a valid game action along with required parameters
     """
-    def __init__(self, name="DDQN Agent", state_dim=240, action_dim=2950,
+    def __init__(self, name="DDQN Agent", state_dim=240, action_dim=2934,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
                  replay_capacity=10000, target_update_freq=500):
         """

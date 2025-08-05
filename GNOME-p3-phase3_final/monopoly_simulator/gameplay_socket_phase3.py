@@ -20,6 +20,7 @@ from monopoly_simulator.server_agent_serial import ServerAgent
 #from monopoly_simulator.random_novelty_generation import *
 import logging
 import copy
+import torch
 ### for reimport in set_up_board
 import importlib
 import monopoly_simulator
@@ -27,6 +28,10 @@ from monopoly_simulator import agent_helper_functions_v2 as agent_helper_functio
 from monopoly_simulator import location
 from monopoly_simulator import player
 from monopoly_simulator.player import Player
+from monopoly_simulator.ddqn_decision_agent import ddqn_agent_instance
+from monopoly_simulator.action_encoding import ActionEncoder
+from monopoly_simulator.monopoly_state_encoder import MonopolyStateEncoder
+from monopoly_simulator.action_mapping_builder import create_action_mask
 ###
 from action_vector_logger import ActionVectorLogger, integrate_with_gameplay
 from monopoly_simulator import action_choices, diagnostics, card_utility_actions, read_write_current_state
@@ -153,28 +158,95 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     # Monkey patch the _execute_action method of Player to track actions
     original_execute_action = player.Player._execute_action
     
-    def execute_action_with_tracking(self, action_to_execute, parameters, current_gameboard):
-    # Only track for RL agent
+    def execute_action_with_ddqn_and_tracking(self, action_to_execute, parameters, current_gameboard):
+     rl_agent_name = 'player_3'
+     # Access the local track_action function from the simulate_game_instance scope
+     
+
      if self.player_name == rl_agent_name:
-        current_state = encoder.encode_state(current_gameboard).numpy()[0]
+        # 1. Encode current state
+        state_encoder = ddqn_agent_instance.state_encoder
+        action_encoder = ddqn_agent_instance.action_encoder
+        state_vector = state_encoder.encode_state(current_gameboard)
+        state_tensor = state_vector.to(ddqn_agent_instance.device).float().unsqueeze(0)  # [1, state_dim]
+
+        # 2. Build action mapping and mask
+        full_mapping = action_encoder.build_full_action_mapping(self, current_gameboard)
+        game_phase = getattr(self, "current_phase", "post_roll")
+        action_mask = create_action_mask(self, current_gameboard, game_phase)
+        mask_tensor = torch.BoolTensor(action_mask).to(ddqn_agent_instance.device)
+
+        # 3. Get Q-values from policy net and mask invalid actions
+        with torch.no_grad():
+            q_values = ddqn_agent_instance.ddqn_agent.policy_net(state_tensor)  # [1, action_dim]
+            q_values = q_values.squeeze() 
+            q_values[~mask_tensor] = -float('inf')
+            action_idx = torch.argmax(q_values, dim=0).item()
+
+        # 4. Decode action and parameters
+        mapping = action_encoder.decode_action(self, current_gameboard, action_idx)
+        action_name = mapping.get("action")
+        action_params = mapping.get("parameters", {})
+
+        # 5. Execute the action
+        action_func = getattr(action_choices, action_name)
+        result = original_execute_action(self, action_func, action_params, current_gameboard)
+
+        # 6. Calculate reward, next state, done
+        reward = ddqn_agent_instance._calculate_reward(self, current_gameboard)
+        next_state_vector = state_encoder.encode_state(current_gameboard)
+        next_state_tensor = next_state_vector.to(ddqn_agent_instance.device).float().unsqueeze(0)
+        done = ddqn_agent_instance._is_episode_done(current_gameboard)
+
+        # 7. Get next Q-values from target net for DDQN target
+        with torch.no_grad():
+            next_mask = create_action_mask(self, current_gameboard, game_phase)
+            next_mask_tensor = torch.BoolTensor(next_mask).to(ddqn_agent_instance.device)
+            next_q_policy = ddqn_agent_instance.ddqn_agent.policy_net(next_state_tensor)
+            next_q_policy = next_q_policy.squeeze()
+            next_q_policy[~next_mask_tensor] = -float('inf')
+            next_action_idx = torch.argmax(next_q_policy, dim=0).item()
+            next_q_target = ddqn_agent_instance.ddqn_agent.target_net(next_state_tensor)
+            next_q_target = next_q_target.squeeze()
+            target_q = reward
+            if not done:
+                gamma = ddqn_agent_instance.ddqn_agent.gamma
+                target_q += gamma * next_q_target[next_action_idx].item()
+
+        # 8. Compute loss and backprop
+        q_pred = ddqn_agent_instance.ddqn_agent.policy_net(state_tensor)
+        q_pred = q_pred.squeeze()  # <--- ADD THIS
+        q_pred = q_pred[action_idx]
+        loss = torch.nn.functional.mse_loss(q_pred, torch.tensor(target_q, device=ddqn_agent_instance.device, dtype=torch.float))
+        ddqn_agent_instance.ddqn_agent.optimizer.zero_grad()
+        loss.backward()
+        ddqn_agent_instance.ddqn_agent.optimizer.step()
+
+        # 9. Update target net every N steps
+        ddqn_agent_instance.ddqn_agent.step_count += 1
+        if ddqn_agent_instance.ddqn_agent.step_count % ddqn_agent_instance.ddqn_agent.target_update_freq == 0:
+            ddqn_agent_instance.update_target_network()
+
+        # 10. Store in DDQN replay buffer
+        ddqn_agent_instance.ddqn_agent.replay_buffer.push(
+            state_vector.cpu().numpy(),
+            action_idx,
+            reward,
+            next_state_vector.cpu().numpy(),
+            done
+        )
+
+        # 11. Also track in the local replay buffer for logging/analysis
+        track_action(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
+
+        return result
      else:
-        current_state = None
+        # For non-RL agents, just call the original
+        return original_execute_action(self, action_to_execute, parameters, current_gameboard)
 
-    # Execute the original action
-     result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
-
-     if self.player_name == rl_agent_name:
-        next_state = encoder.encode_state(current_gameboard).numpy()[0]
-        from monopoly_simulator.replay_buffer_module import calculate_reward, get_action_index, is_episode_done
-        reward = calculate_reward(self, current_gameboard)
-        done = is_episode_done(self, current_gameboard)
-        action_idx = get_action_index(self, current_gameboard)
-        track_action(current_state, action_idx, reward, next_state, done)
-
-     return result
 
     # Apply the monkey patch
-    player.Player._execute_action = execute_action_with_tracking
+    player.Player._execute_action = execute_action_with_ddqn_and_tracking
     
     logger.debug("size of board " + str(len(game_elements['location_sequence'])))
     np.random.seed(np_seed)

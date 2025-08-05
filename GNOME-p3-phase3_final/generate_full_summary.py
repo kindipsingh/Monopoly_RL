@@ -51,6 +51,7 @@ def generate_full_summary(pkl_path):
         'avg_reward': 0
     }
     
+    
     # Get the buffer
     buffer = data['buffer'] if 'buffer' in data else data
     

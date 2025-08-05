@@ -36,7 +36,7 @@ class ReplayBuffer:
 # DDQN Agent Implementation
 # -----------------------------
 class DDQNAgent:
-    def __init__(self, state_dim=240, action_dim=2950,
+    def __init__(self, state_dim=240, action_dim=2934,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
                  replay_capacity=10000, target_update_freq=500):
         self.state_dim = state_dim
@@ -44,6 +44,7 @@ class DDQNAgent:
         self.gamma = gamma
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
+        self.step_count = 0
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         

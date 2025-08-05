@@ -20,7 +20,8 @@ class DDQNNetwork(nn.Module):
       - Experience Replay Buffer Size: 10^4 entries
       - Target Network Update: Every 500 episodes, update target network parameters to match policy network
     """
-    def __init__(self, state_dim=240, action_dim=2950):
+    
+    def __init__(self, state_dim=240, action_dim=2934):
         super(DDQNNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, 1024)
         self.fc2 = nn.Linear(1024, 512)
