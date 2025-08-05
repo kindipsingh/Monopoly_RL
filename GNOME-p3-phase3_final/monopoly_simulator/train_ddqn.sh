@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Set the Python path to include the project directory

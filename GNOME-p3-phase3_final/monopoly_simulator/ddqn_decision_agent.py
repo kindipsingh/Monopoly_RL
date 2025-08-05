@@ -101,6 +101,9 @@ class DDQNDecisionAgent(Agent):
         self.action_encoder = ActionEncoder()
         
         self.current_state = None
+        self.last_game_phase = None
+        self.game_history = []
+        self.training_mode = True
         self.last_action_idx = None
         self.last_state_vector = None
         self.last_action_mask = None
@@ -519,40 +522,24 @@ class DDQNDecisionAgent(Agent):
                     action_name = "skip_turn"
                 rl_logger.info(f"Defaulting to {action_name}")
                 return (action_name, {})
-            else:
-                # Check if there are valid actions other than skip_turn and concluded_actions
-                non_skip_actions = []
-                for idx in valid_action_indices:
-                    action_name = full_mapping[idx]["action"]
-                    if action_name not in ["skip_turn", "concluded_actions"]:
-                        non_skip_actions.append(idx)
-                
-                # If there are non-skip actions available, prioritize them
-                if len(non_skip_actions) > 0:
-                    rl_logger.info(f"Found {len(non_skip_actions)} non-skip actions. Prioritizing these.")
-                    action_idx = np.random.choice(non_skip_actions)
-                    rl_logger.debug(f"Randomly selected non-skip action index: {action_idx}")
-                else:
-                    # Otherwise, select from all valid actions
-                    action_idx = np.random.choice(valid_action_indices)
-                    rl_logger.debug(f"Randomly selected valid action index: {action_idx}")
-                
-                # Later, you can replace this with DDQN selection from valid actions:
-                # action_idx = self.ddqn_agent.select_action(state_tensor, mask_tensor)
             
-            rl_logger.debug(f"Action_idx value: {action_idx}")
-             # IMPORTANT: Store the action_idx in the player object and agent memory
-            player.last_action_idx = action_idx
-            rl_logger.debug(f"{player.last_action_idx}")
-        
-            # Also store in agent memory if available
-            if hasattr(player, 'agent') and player.agent is not None:
-                player.agent.last_action_idx = action_idx
-                rl_logger.debug(f"1")
-                if not hasattr(player.agent, '_agent_memory') or player.agent._agent_memory is None:
+            # Use DDQN to select action
+            with torch.no_grad():
+                q_values = self.ddqn_agent.policy_net(state_tensor.float().unsqueeze(0))
+                q_values = q_values.squeeze()
+                q_values[~mask_tensor] = -float('inf')
+                action_idx = torch.argmax(q_values).item()
+                
+            rl_logger.debug(f"Action_idx value from DDQN: {action_idx}")
+            
+            # Store state and action for the learning step
+            self.last_state_vector = state_vector
+            self.last_action_idx = action_idx
+            self.last_game_phase = game_phase
+            if(player.agent, '_agent_memory') or player.agent._agent_memory is None:
                     player.agent._agent_memory = {}
                     rl_logger.debug(f"2")
-                player.agent._agent_memory['last_action_idx'] = action_idx
+                    player.agent._agent_memory['last_action_idx'] = action_idx
             
             rl_logger.debug(f"{player.agent._agent_memory['last_action_idx']}")
         

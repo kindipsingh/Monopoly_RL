@@ -200,7 +200,7 @@ if __name__ == "__main__":
                         help="Execution mode: train or evaluate")
     parser.add_argument("--num_games", type=int, default=100,
                         help="Number of games for training")
-    parser.add_argument("--eval_games", type=int, default=10,
+    parser.add_argument("--eval_games", type=int, default=1,
                         help="Number of games for evaluation")
     parser.add_argument("--save_interval", type=int, default=10,
                         help="Interval (in games) to save the model")
