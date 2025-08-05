@@ -377,12 +377,12 @@ def check_improve_property_validity(mapping_entry: Dict, current_gameboard: Dict
         
         if property_obj.num_houses == 4 and property_obj.num_hotels == 0:
             # Check if there are hotels available in the bank
-            if current_gameboard.get('bank').num_hotels <= 0:
+            if current_gameboard.get('bank').total_hotels <= 0:
                 logger.debug("No hotels available in the bank")
                 return False
         else:
             # Check if there are houses available in the bank
-            if current_gameboard.get('bank').num_houses <= 0:
+            if current_gameboard.get('bank').total_houses <= 0:
                 logger.debug("No houses available in the bank")
                 return False
     
@@ -509,7 +509,7 @@ def check_sell_house_hotel_validity(mapping_entry: Dict, current_gameboard: Dict
         
         # Check if there are enough houses in the bank to replace the hotel
         # A hotel is replaced with 4 houses when sold
-        if current_gameboard.get('bank').num_houses < 4:
+        if current_gameboard.get('bank').total_houses < 4:
             logger.debug(f"Not enough houses in the bank to replace the hotel on {asset_name}")
             return False
     
