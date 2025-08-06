@@ -1,0 +1,4 @@
+2025-08-06 23:49:14,676 - monopoly_simulator.gameplay_socket_phase3 - INFO - Replay buffer stats: size=336, capacity=100000
+2025-08-06 23:49:14,676 - monopoly_simulator.gameplay_socket_phase3 - INFO - Average reward: -0.5861
+2025-08-06 23:49:14,676 - monopoly_simulator.gameplay_socket_phase3 - INFO - Episode rewards: [np.float64(-196.9153500000002)]
+2025-08-06 23:49:14,687 - monopoly_simulator.gameplay_socket_phase3 - INFO - Replay buffer saved to ../single_tournament/replay_buffer_seed_8222.pkl
