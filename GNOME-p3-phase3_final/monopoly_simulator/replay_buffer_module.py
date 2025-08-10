@@ -109,6 +109,7 @@ class ReplayBuffer:
         """
         # Extract the action index based on what type of action we received
         action_idx = 0  # Default
+        logger.debug(f"Action Passed to replay buffer {action}")
         
         if isinstance(action, (int, np.integer)):
             # Action is already an index

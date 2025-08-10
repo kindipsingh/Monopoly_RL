@@ -10,7 +10,7 @@ class DDQNNetwork(nn.Module):
       - Input: 240-dimensional state encoding (from MonopolyStateEncoder)
       - Hidden Layer 1: 1024 neurons, ReLU activation
       - Hidden Layer 2: 512 neurons, ReLU activation
-      - Output: 2922 neurons representing Q-values for each action
+      - Output: 2934 neurons representing Q-values for each action
       
     Training Details (to be handled externally):
       - Optimizer: Adam (recommended learning rate: 1e-5)

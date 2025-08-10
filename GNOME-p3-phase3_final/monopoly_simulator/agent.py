@@ -4,9 +4,7 @@ logger = logging.getLogger('monopoly_simulator.logging_info.agent')
 
 
 class Agent(object):
-    def __init__(self,handle_negative_cash_balance, make_pre_roll_move, # on this line and below, all variables are assigned to a method
-                 make_out_of_turn_move,
-                 make_post_roll_move, make_buy_property_decision, make_bid, type):
+    def __init__(self, **kwargs):
         """
         While you could always instantiate this class directly, sub-classing may be a better option since it will allow
         you to maintain your own state/variables.
@@ -21,15 +19,33 @@ class Agent(object):
         :param type: type of dictionary
         """
 
-        self.handle_negative_cash_balance = handle_negative_cash_balance
-        self.make_pre_roll_move = make_pre_roll_move
-        self.make_out_of_turn_move = make_out_of_turn_move
-        self.make_post_roll_move = make_post_roll_move
-        self.make_buy_property_decision = make_buy_property_decision
-        self.make_bid = make_bid
-        self.type = type
+        self.handle_negative_cash_balance = kwargs.get('handle_negative_cash_balance')
+        self.make_pre_roll_move = kwargs.get('make_pre_roll_move')
+        self.make_out_of_turn_move = kwargs.get('make_out_of_turn_move')
+        self.make_post_roll_move = kwargs.get('make_post_roll_move')
+        self.make_buy_property_decision = kwargs.get('make_buy_property_decision')
+        self.make_bid = kwargs.get('make_bid')
+        self.type = kwargs.get('type')
+
+        self._calculate_reward = kwargs.get('_calculate_reward', self._default_calculate_reward)
+        self._is_episode_done = kwargs.get('_is_episode_done', self._default_is_episode_done)
+        self.get_training_mode = kwargs.get('get_training_mode', self._default_get_training_mode)
+        self.get_last_action_idx = kwargs.get('get_last_action_idx', self._default_get_last_action_idx)
+
         self.is_running = False   #a flag which says if the agent is active or shutdown
         self._agent_memory = dict()  # a scratchpad for the agent
+
+    def _default_calculate_reward(self, player, current_gameboard):
+        return 0
+
+    def _default_is_episode_done(self, current_gameboard):
+        return False
+
+    def _default_get_training_mode(self):
+        return False
+        
+    def _default_get_last_action_idx(self):
+        return None
 
 
     def startup(self, current_gameboard, indicator=None):

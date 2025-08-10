@@ -9,7 +9,7 @@ from monopoly_simulator.action_encoding import ActionEncoder
 from monopoly_simulator.monopoly_state_encoder import MonopolyStateEncoder
 from monopoly_simulator.logging_info import log_file_create
 from monopoly_simulator.ddqnn import DDQNNetwork
-from monopoly_simulator.training_ddqnn import DDQNAgent
+from monopoly_simulator.replay_buffer_module import ReplayBuffer
 import logging
 from monopoly_simulator import action_validator
 from monopoly_simulator.flag_config import flag_config_dict
@@ -17,6 +17,38 @@ from monopoly_simulator.flag_config import flag_config_dict
 from monopoly_simulator import agent_helper_functions_v2 as agent_helper_functions
 import pickle
 import os
+import torch.optim as optim
+
+
+# -----------------------------
+# DDQN Agent Implementation
+# -----------------------------
+class DDQNAgent:
+    def __init__(self, state_dim=240, action_dim=2934,
+                 lr=1e-5, gamma=0.9999, batch_size=128, 
+                 replay_capacity=10000, target_update_freq=500):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.target_update_freq = target_update_freq
+        self.step_count = 0
+        self.replay_buffer = ReplayBuffer(replay_capacity)
+        
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.policy_net = DDQNNetwork(state_dim, action_dim).to(self.device)
+        self.target_net = DDQNNetwork(state_dim, action_dim).to(self.device)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()
+        
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        
+        self.epsilon = 1.0
+        self.epsilon_min = 0.1
+        self.epsilon_decay = 0.995
+        
+        self.steps_done = 0
 
 ##############################################################
 # Logging configuration
@@ -104,11 +136,8 @@ class DDQNDecisionAgent(Agent):
         self.last_game_phase = None
         self.game_history = []
         self.training_mode = True
-        self.last_action_idx = None
-        self.last_state_vector = None
         self.last_action_mask = None
         self.game_history = []
-        self.training_mode = True
         
         self.replay_buffer_size = 0
         self.total_rewards = 0
@@ -125,8 +154,6 @@ class DDQNDecisionAgent(Agent):
         global_ddqn_agent = self
         
         rl_logger.info(f"{self.name} initialization complete")
-
-
 
     
     def make_pre_roll_move(self, player, current_gameboard, allowable_moves, code):
@@ -524,27 +551,28 @@ class DDQNDecisionAgent(Agent):
                 return (action_name, {})
             
             # Use DDQN to select action
-            with torch.no_grad():
-                q_values = self.ddqn_agent.policy_net(state_tensor.float().unsqueeze(0))
-                q_values = q_values.squeeze()
-                q_values[~mask_tensor] = -float('inf')
-                action_idx = torch.argmax(q_values).item()
-                
-            rl_logger.debug(f"Action_idx value from DDQN: {action_idx}")
+            if self.training_mode and random.random() < self.ddqn_agent.epsilon:
+                action_idx = random.choice(valid_action_indices)
+                rl_logger.debug(f"Epsilon-greedy choice: Selected random action_idx={action_idx}")
+            else:
+                with torch.no_grad():
+                    q_values = self.ddqn_agent.policy_net(state_tensor.float().unsqueeze(0))
+                    q_values = q_values.squeeze()
+                    q_values[~mask_tensor] = -float('inf')
+                    action_idx = torch.argmax(q_values).item()
+                    rl_logger.debug(f"Policy network choice: Selected action_idx={action_idx}")
+
+            if self.training_mode:
+                self.ddqn_agent.epsilon = max(self.ddqn_agent.epsilon_min, self.ddqn_agent.epsilon * self.ddqn_agent.epsilon_decay)
             
             # Store state and action for the learning step
             self.last_state_vector = state_vector
             self.last_action_idx = action_idx
             self.last_game_phase = game_phase
-            if(player.agent, '_agent_memory') or player.agent._agent_memory is None:
-                    player.agent._agent_memory = {}
-                    rl_logger.debug(f"2")
-                    player.agent._agent_memory['last_action_idx'] = action_idx
-            
-            rl_logger.debug(f"{player.agent._agent_memory['last_action_idx']}")
-        
-            # Store in the DDQN agent for later training
-            self.last_action_idx = action_idx
+            if not hasattr(player.agent, '_agent_memory') or player.agent._agent_memory is None:
+                player.agent._agent_memory = {}
+            player.agent._agent_memory['last_action_idx'] = action_idx
+            rl_logger.debug(f"Stored last_action_idx {action_idx} in player agent memory.")
         
             # Decode the selected action
             mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
@@ -709,6 +737,10 @@ class DDQNDecisionAgent(Agent):
         return final_reward
     
     def _is_episode_done(self, current_gameboard):
+        """
+        Checks if the episode is done based on the current game state.
+        """
+
         if 'winner' in current_gameboard and current_gameboard['winner'] is not None:
             rl_logger.info(f"Episode done: Game has a winner - {current_gameboard['winner']}")
             return True
@@ -719,13 +751,13 @@ class DDQNDecisionAgent(Agent):
                 return True
         
         return False
-    
+
     def train(self):
         loss = self.ddqn_agent.optimize_model()
         if loss is not None:
             rl_logger.info(f"Training loss: {loss:.6f}")
         return loss
-    
+
     def update_target_network(self):
         self.ddqn_agent.update_target_network()
         rl_logger.info("Target network updated")
@@ -823,6 +855,31 @@ def make_bid(player, current_gameboard, asset, current_bid):
         return global_ddqn_agent.make_bid(player, current_gameboard, asset, current_bid)
     return 0
 
+def _calculate_reward(player, current_gameboard):
+    if global_ddqn_agent:
+        return global_ddqn_agent._calculate_reward(player, current_gameboard)
+    return 0
+
+def _is_episode_done(current_gameboard):
+    if global_ddqn_agent:
+        return global_ddqn_agent._is_episode_done(current_gameboard)
+    return False
+
+def get_training_mode():
+    if global_ddqn_agent:
+        return global_ddqn_agent.training_mode
+    return False
+
+def get_last_action_idx():
+    if global_ddqn_agent:
+        return global_ddqn_agent.last_action_idx
+    return None
+
+def get_replay_buffer():
+    if global_ddqn_agent:
+        return global_ddqn_agent.ddqn_agent.replay_buffer
+    return None
+
 def _build_decision_agent_methods_dict():
     ans = dict()
     ans['handle_negative_cash_balance'] = handle_negative_cash_balance
@@ -831,10 +888,16 @@ def _build_decision_agent_methods_dict():
     ans['make_post_roll_move'] = make_post_roll_move
     ans['make_buy_property_decision'] = make_buy_property_decision
     ans['make_bid'] = make_bid
+    ans['_calculate_reward'] = _calculate_reward
+    ans['_is_episode_done'] = _is_episode_done
+    ans['get_last_action_idx'] = get_last_action_idx
+    ans['get_training_mode'] = get_training_mode
+    ans['get_replay_buffer'] = get_replay_buffer
     ans['type'] = "decision_agent_methods"
     return ans
 
 decision_agent_methods = _build_decision_agent_methods_dict()
+
 
 def check_replay_buffer():
     if global_ddqn_agent:
