@@ -9,7 +9,7 @@ mkdir -p ../models
 
 # Default configuration
 MODE="train"                    # Default mode: train; alternatives: evaluate, analyze
-NUM_GAMES=2                  # Number of games for training/evaluation
+NUM_GAMES=1                  # Number of games for training/evaluation
 SAVE_INTERVAL=1                # Save model every SAVE_INTERVAL games
 MODEL_PATH="../models/ddqn_model_final.pth"  # Model file to load/save
 LEARNING_RATE=0.00001           # Learning rate

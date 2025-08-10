@@ -69,7 +69,7 @@ def train_agent(num_games=2, save_interval=1, learning_rate=1e-5, gamma=0.99,
     ddqn_agent_instance.ddqn_agent.epsilon_decay = epsilon_decay
     ddqn_agent_instance.set_training_mode(True)
 
-    agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
+    agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_agent_instance, background_agent_v4_1]]
 
     wins = 0
     losses = 0
@@ -136,7 +136,7 @@ def evaluate_agent(model_path, num_games=10):
     ddqn_agent_instance.load_model(model_path)
     ddqn_agent_instance.set_training_mode(False)
 
-    agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_decision_agent, background_agent_v4_1]]
+    agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_agent_instance, background_agent_v4_1]]
 
     wins = 0
     losses = 0

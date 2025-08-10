@@ -213,8 +213,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             action_encoder = ActionEncoder()
             state_vector = state_encoder.encode_state(current_gameboard)
 
-            action_idx = self.agent.get_last_action_idx()
-            optimizer_logger.debug(f"Action Index retrieved for DDQN Agent called for {action_idx}")
+            action_idx = self.agent.last_action_idx
+            optimizer_logger.debug(f"Action Index retrieved for DDQN Agent called for {self.agent.last_action_idx}")
             #Execute the action and get the result
             result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
 
@@ -227,12 +227,11 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
 
             #Save the action to the replay buffer
             track_action(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
-            agent_replay_buffer = self.agent.get_replay_buffer()
-            agent_replay_buffer.add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
+            self.agent.ddqn_agent.replay_buffer.add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
             #Update the network if in training mode
-            training_mode = self.agent.get_training_mode()
+            training_mode = self.agent.training_mode
             # if training_mode:
-            #     loss = optimize_model(self.agent)
+            #     loss = optimize_model(self.agent.ddqn_agent)
             #     if loss is not None:
             #         optimizer_logger.info(f"DDQN training loss: {loss:.4f}")
 
@@ -739,7 +738,7 @@ def play_game_in_tournament_socket_phase3( game_seed, agent1, agent2, agent3, ag
     else:
         player_decision_agents['player_1'] = Agent(**background_agent_v3_1.decision_agent_methods)
     player_decision_agents['player_2'] = Agent(**agent2.decision_agent_methods)
-    player_decision_agents['player_3'] = Agent(**agent3.decision_agent_methods)
+    player_decision_agents['player_3'] = agent3
     player_decision_agents['player_4'] = Agent(**agent4.decision_agent_methods)
 
     #print(Player.process_move_consequences.__module__)

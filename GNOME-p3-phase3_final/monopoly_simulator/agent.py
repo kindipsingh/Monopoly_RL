@@ -29,8 +29,6 @@ class Agent(object):
 
         self._calculate_reward = kwargs.get('_calculate_reward', self._default_calculate_reward)
         self._is_episode_done = kwargs.get('_is_episode_done', self._default_is_episode_done)
-        self.get_training_mode = kwargs.get('get_training_mode', self._default_get_training_mode)
-        self.get_last_action_idx = kwargs.get('get_last_action_idx', self._default_get_last_action_idx)
 
         self.is_running = False   #a flag which says if the agent is active or shutdown
         self._agent_memory = dict()  # a scratchpad for the agent
@@ -45,6 +43,9 @@ class Agent(object):
         return False
         
     def _default_get_last_action_idx(self):
+        return None
+    
+    def _default_get_replay_buffer(self):
         return None
 
 

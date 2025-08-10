@@ -113,6 +113,8 @@ class DDQNDecisionAgent(Agent):
             make_post_roll_move=self.make_post_roll_move,
             make_buy_property_decision=self.make_buy_property_decision,
             make_bid=self.make_bid,
+            _calculate_reward=self._calculate_reward,
+            _is_episode_done=self._is_episode_done,
             type="decision_agent_methods"
         )
         
@@ -865,21 +867,6 @@ def _is_episode_done(current_gameboard):
         return global_ddqn_agent._is_episode_done(current_gameboard)
     return False
 
-def get_training_mode():
-    if global_ddqn_agent:
-        return global_ddqn_agent.training_mode
-    return False
-
-def get_last_action_idx():
-    if global_ddqn_agent:
-        return global_ddqn_agent.last_action_idx
-    return None
-
-def get_replay_buffer():
-    if global_ddqn_agent:
-        return global_ddqn_agent.ddqn_agent.replay_buffer
-    return None
-
 def _build_decision_agent_methods_dict():
     ans = dict()
     ans['handle_negative_cash_balance'] = handle_negative_cash_balance
@@ -890,9 +877,6 @@ def _build_decision_agent_methods_dict():
     ans['make_bid'] = make_bid
     ans['_calculate_reward'] = _calculate_reward
     ans['_is_episode_done'] = _is_episode_done
-    ans['get_last_action_idx'] = get_last_action_idx
-    ans['get_training_mode'] = get_training_mode
-    ans['get_replay_buffer'] = get_replay_buffer
     ans['type'] = "decision_agent_methods"
     return ans
 
