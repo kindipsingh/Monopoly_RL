@@ -133,24 +133,49 @@ def disable_history(game_elements):
     game_elements['history']['time_step'] = list()
 
 def optimize_model(agent):
-    optimizer_logger.debug(f"Attempting to optimize model. Replay buffer size: {len(agent.replay_buffer.buffer)}, Batch size: {agent.batch_size}")
+    optimizer_logger.debug(
+        f"Attempting to optimize model. Replay buffer size: {len(agent.replay_buffer.buffer)}, "
+        f"Batch size: {agent.batch_size}"
+    )
+    
     if len(agent.replay_buffer.buffer) < agent.batch_size:
         optimizer_logger.debug("Skipping optimization: Replay buffer smaller than batch size.")
         return None
 
-    transitions = agent.replay_buffer.sample(agent.batch_size)
-    batch = list(zip(*transitions))
+    # Sample returns 5 arrays: states, actions, rewards, next_states, dones
+    states, actions, rewards, next_states, dones = agent.replay_buffer.sample(agent.batch_size)
 
-    state_batch = torch.FloatTensor(np.array(batch[0])).to(agent.device)
-    action_batch = torch.LongTensor(batch[1]).unsqueeze(1).to(agent.device)
-    reward_batch = torch.FloatTensor(batch[2]).to(agent.device)
-    next_state_batch = torch.FloatTensor(np.array(batch[3])).to(agent.device)
-    done_batch = torch.BoolTensor(batch[4]).to(agent.device)
+    # optimizer_logger.debug(f"Sampled actions: {actions.tolist()}")
+    # optimizer_logger.debug(f"States shape: {np.array(states).shape}")
+    # optimizer_logger.debug(f"Actions shape: {np.array(actions).shape}")
+    # optimizer_logger.debug(f"Rewards shape: {np.array(rewards).shape}")
+    # optimizer_logger.debug(f"Next states shape: {np.array(next_states).shape}")
+    # optimizer_logger.debug(f"Dones shape: {np.array(dones).shape}")
 
-    q_values = agent.policy_net(state_batch).gather(1, action_batch)
+    # Convert to tensors on the correct device
+    state_batch = torch.FloatTensor(states).squeeze(1).to(agent.device)       # [batch_size, state_dim]
+    action_batch = torch.LongTensor(actions).unsqueeze(1).to(agent.device)    # [batch_size, 1]
+    reward_batch = torch.FloatTensor(rewards).to(agent.device)
+    next_state_batch = torch.FloatTensor(next_states).squeeze(1).to(agent.device)
+    done_batch = torch.BoolTensor(dones).to(agent.device)
 
+
+    # Shape safety checks
+    assert state_batch.ndim == 2, f"Expected state_batch to be 2D, got {state_batch.shape}"
+    assert action_batch.ndim == 2 and action_batch.shape[1] == 1, \
+        f"Expected action_batch shape [batch_size, 1], got {action_batch.shape}"
+    assert state_batch.shape[0] == action_batch.shape[0], "Batch size mismatch"
+
+    q_values_from_net = agent.policy_net(state_batch)
+    optimizer_logger.debug(f"Policy net output shape: {q_values_from_net.shape}")
+    optimizer_logger.debug(f"Action batch shape: {action_batch.shape}")
+
+    # Q(s,a)
+    q_values = q_values_from_net.gather(1, action_batch)
+
+    # Q target = r + γ * max_a' Q_target(s', a')
     next_q_values = agent.target_net(next_state_batch).max(1)[0].detach()
-    expected_q_values = reward_batch + (agent.gamma * next_q_values * ~done_batch)
+    expected_q_values = reward_batch + (agent.gamma * next_q_values * (~done_batch))
 
     loss = torch.nn.functional.mse_loss(q_values, expected_q_values.unsqueeze(1))
 
@@ -162,11 +187,11 @@ def optimize_model(agent):
     if agent.step_count % agent.target_update_freq == 0:
         agent.target_net.load_state_dict(agent.policy_net.state_dict())
 
-    optimizer_logger.debug(f"Batch States: {state_batch.tolist()[:2]}")
-    optimizer_logger.debug(f"Batch Actions: {action_batch.tolist()[:2]}")
-    optimizer_logger.debug(f"Batch Rewards: {reward_batch.tolist()[:2]}")
-    optimizer_logger.debug(f"Q-Values: {q_values.tolist()[:2]}")
-    optimizer_logger.debug(f"Expected Q-Values: {expected_q_values.tolist()[:2]}")
+    optimizer_logger.debug(f"Batch States (first 2): {states[:2]}")
+    optimizer_logger.debug(f"Batch Actions (first 2): {actions[:2]}")
+    optimizer_logger.debug(f"Batch Rewards (first 2): {rewards[:2]}")
+    optimizer_logger.debug(f"Q-Values (first 2): {q_values[:2].tolist()}")
+    optimizer_logger.debug(f"Expected Q-Values (first 2): {expected_q_values[:2].tolist()}")
     optimizer_logger.info(f"Loss: {loss.item()}")
 
     return loss.item()
@@ -230,10 +255,10 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             self.agent.ddqn_agent.replay_buffer.add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
             #Update the network if in training mode
             training_mode = self.agent.training_mode
-            # if training_mode:
-            #     loss = optimize_model(self.agent.ddqn_agent)
-            #     if loss is not None:
-            #         optimizer_logger.info(f"DDQN training loss: {loss:.4f}")
+            if training_mode:
+                loss = optimize_model(self.agent.ddqn_agent)
+                if loss is not None:
+                    optimizer_logger.info(f"DDQN training loss: {loss:.4f}")
 
             return result
         else:
@@ -330,7 +355,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             
             # Record state for RL agent if it's their turn
             if out_of_turn_player.player_name == rl_agent_name:
-                current_state = encoder.encode_state(game_elements).numpy()[0]
+                current_state = encoder.encode_state(game_elements).numpy()
                 logger.debug(f"Recorded out-of-turn state for {rl_agent_name}")
             
             # Log allowable out-of-turn actions for debugging
@@ -388,7 +413,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             
             # Record state for RL agent if it's their turn
             if current_player.player_name == rl_agent_name:
-                current_state = encoder.encode_state(game_elements).numpy()[0]
+                current_state = encoder.encode_state(game_elements).numpy()
                 logger.debug(f"Recorded post-roll state for {rl_agent_name}")
             
             # Log allowable post-roll actions for debugging
