@@ -177,10 +177,11 @@ def optimize_model(agent):
     next_q_values = agent.target_net(next_state_batch).max(1)[0].detach()
     expected_q_values = reward_batch + (agent.gamma * next_q_values * (~done_batch))
 
-    loss = torch.nn.functional.mse_loss(q_values, expected_q_values.unsqueeze(1))
+    loss = torch.nn.functional.huber_loss(q_values, expected_q_values.unsqueeze(1))
 
     agent.optimizer.zero_grad()
     loss.backward()
+    torch.nn.utils.clip_grad_norm_(agent.policy_net.parameters(), 1.0)
     agent.optimizer.step()
 
     agent.step_count += 1
@@ -210,13 +211,21 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     from monopoly_simulator.replay_buffer_module import ReplayBuffer, calculate_reward, get_action_index, is_episode_done, add_to_replay_buffer, store_player_decision
     from monopoly_simulator.action_encoding import ActionEncoder
     
-    # Initialize replay buffer for player_3 (RL agent)
-    encoder = MonopolyStateEncoder()
+    # Find the RL agent and its replay buffer
     rl_agent_name = 'player_3'
-    replay_buffer = ReplayBuffer(capacity=100000)  # Adjust capacity as needed
+    rl_agent = None
+    for p in game_elements['players']:
+        if p.player_name == rl_agent_name:
+            rl_agent = p.agent
+            break
     
-    # Store the replay buffer in game_elements so it can be accessed by other components
-    game_elements['replay_buffer'] = replay_buffer
+    if rl_agent:
+        replay_buffer = rl_agent.ddqn_agent.replay_buffer
+        game_elements['replay_buffer'] = replay_buffer
+        logger.info("Using replay buffer from the DDQN agent.")
+    else:
+        logger.error("DDQN agent not found. A replay buffer will not be available.")
+        game_elements['replay_buffer'] = None
     
     # Initialize the action encoder for building the full action mapping
     action_encoder = ActionEncoder()
@@ -251,8 +260,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             done = self.agent._is_episode_done(current_gameboard)
 
             #Save the action to the replay buffer
-            track_action(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
-            self.agent.ddqn_agent.replay_buffer.add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
+            if game_elements['replay_buffer'] is not None:
+                game_elements['replay_buffer'].add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
             #Update the network if in training mode
             training_mode = self.agent.training_mode
             if training_mode:
@@ -525,7 +534,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         logger.info(f"Episode rewards: {buffer_stats['episode_rewards']}")
     
     # Save the replay buffer to a file
-    buffer_filepath = f"../single_tournament/replay_buffer_seed_{np_seed}.pkl"
+    buffer_filepath = "replay_buffer.pkl"
     replay_buffer.save_to_file(buffer_filepath)
     logger.info(f"Replay buffer saved to {buffer_filepath}")
     

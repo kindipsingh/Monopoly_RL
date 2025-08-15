@@ -257,6 +257,11 @@ class ActionEncoder:
               - "action": the action name.
               - "parameters": a dictionary of parameters required for execution.
         """
+        if acting_player and getattr(acting_player, 'status', '') == 'lost':
+            # If the player has lost, they have no valid actions. Return an empty mapping.
+            # This prevents errors when trying to build action lists for a non-participating player.
+            return []
+        
         full_mapping = []
         full_mapping.extend(build_make_trade_offer_exchange_list(acting_player,current_gameboard, schema_filepath))
         full_mapping.extend(build_make_trade_offer_sell_list(acting_player, schema_filepath))

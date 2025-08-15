@@ -26,7 +26,8 @@ import torch.optim as optim
 class DDQNAgent:
     def __init__(self, state_dim=240, action_dim=2934,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
-                 replay_capacity=10000, target_update_freq=500):
+                 replay_capacity=10000, target_update_freq=500,
+                 epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.99995):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
@@ -44,9 +45,9 @@ class DDQNAgent:
         
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         
-        self.epsilon = 1.0
-        self.epsilon_min = 0.1
-        self.epsilon_decay = 0.995
+        self.epsilon = epsilon_start
+        self.epsilon_min = epsilon_end
+        self.epsilon_decay = epsilon_decay
         
         self.steps_done = 0
 
@@ -92,7 +93,8 @@ class DDQNDecisionAgent(Agent):
     """
     def __init__(self, name="DDQN Agent", state_dim=240, action_dim=2934,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
-                 replay_capacity=10000, target_update_freq=500):
+                 replay_capacity=10000, target_update_freq=500,
+                 epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.99995):
         """
         Initialize the DDQN Decision Agent.
         
@@ -128,7 +130,10 @@ class DDQNDecisionAgent(Agent):
             gamma=gamma,
             batch_size=batch_size,
             replay_capacity=replay_capacity,
-            target_update_freq=target_update_freq
+            target_update_freq=target_update_freq,
+            epsilon_start=epsilon_start,
+            epsilon_end=epsilon_end,
+            epsilon_decay=epsilon_decay
         )
         
         self.state_encoder = MonopolyStateEncoder()
@@ -140,6 +145,7 @@ class DDQNDecisionAgent(Agent):
         self.training_mode = True
         self.last_action_mask = None
         self.game_history = []
+        self.last_action_name = None
         
         self.replay_buffer_size = 0
         self.total_rewards = 0
@@ -149,7 +155,7 @@ class DDQNDecisionAgent(Agent):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         rl_logger.info(f"Using device: {self.device}")
         
-        replay_buffer_path = os.path.join("GNOME-p3-phase3_final", "monopoly_simulator", "replay_buffer.pkl")
+        replay_buffer_path = "replay_buffer.pkl"
         self.load_replay_buffer(replay_buffer_path)
         
         global global_ddqn_agent
@@ -554,8 +560,16 @@ class DDQNDecisionAgent(Agent):
             
             # Use DDQN to select action
             if self.training_mode and random.random() < self.ddqn_agent.epsilon:
-                action_idx = random.choice(valid_action_indices)
-                rl_logger.debug(f"Epsilon-greedy choice: Selected random action_idx={action_idx}")
+                # Enhanced exploration: prioritize non-trivial actions
+                full_mapping = self.action_encoder.build_full_action_mapping(player, current_gameboard)
+                meaningful_actions = [idx for idx in valid_action_indices if full_mapping[idx].get("action") not in ["skip_turn", "concluded_actions"]]
+                
+                if meaningful_actions:
+                    action_idx = random.choice(meaningful_actions)
+                    rl_logger.debug(f"Epsilon-greedy choice (meaningful action): Selected random action_idx={action_idx}")
+                else:
+                    action_idx = random.choice(valid_action_indices)
+                    rl_logger.debug(f"Epsilon-greedy choice (trivial action): Selected random action_idx={action_idx}")
             else:
                 with torch.no_grad():
                     q_values = self.ddqn_agent.policy_net(state_tensor.float().unsqueeze(0))
@@ -579,6 +593,7 @@ class DDQNDecisionAgent(Agent):
             # Decode the selected action
             mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
             action_name = mapping.get("action")
+            self.last_action_name = action_name
             parameters = mapping.get("parameters", {})
             
             rl_logger.info(f"Decoded action: {action_name} with parameters: {parameters}")
@@ -664,7 +679,8 @@ class DDQNDecisionAgent(Agent):
         property_value = 0
         
         # Calculate property values including houses and hotels
-        for asset in player.assets:
+        player_assets = player.assets if player.assets is not None else []
+        for asset in player_assets:
             property_value += asset.price
             if hasattr(asset, 'num_houses'):
                 property_value += asset.num_houses * asset.price_per_house
@@ -722,6 +738,10 @@ class DDQNDecisionAgent(Agent):
         # Calculate final reward
         final_reward = base_reward + strategic_reward + game_state_reward
         
+        if hasattr(self, 'last_action_name') and self.last_action_name in ['skip_turn', 'concluded_actions']:
+            final_reward -= 1
+            rl_logger.info(f"Applied penalty for action: {self.last_action_name}")
+
         # Log detailed reward breakdown
         rl_logger.info(f"Reward calculation for {player.player_name}:")
         rl_logger.info(f"  Cash: ${player.current_cash}")
@@ -778,7 +798,7 @@ class DDQNDecisionAgent(Agent):
         self.ddqn_agent.policy_net.load_state_dict(checkpoint['policy_net'])
         self.ddqn_agent.target_net.load_state_dict(checkpoint['target_net'])
         self.ddqn_agent.optimizer.load_state_dict(checkpoint['optimizer'])
-        self.ddqn_agent.epsilon = checkpoint['epsilon']
+        self.ddqn_agent.epsilon = checkpoint.get('epsilon', 0.0)  # Default to 0 if not found
         rl_logger.info(f"Model loaded from {path}")
     
     def set_training_mode(self, training_mode):
@@ -802,18 +822,12 @@ class DDQNDecisionAgent(Agent):
     
     def save_replay_buffer(self, file_path):
         """Persist the agent's replay buffer to disk."""
-        with open(file_path, "wb") as f:
-            pickle.dump(self.ddqn_agent.replay_buffer.buffer, f)
+        self.ddqn_agent.replay_buffer.save_to_file(file_path)
         rl_logger.info(f"Replay buffer saved to {file_path}")
 
     def load_replay_buffer(self, file_path):
         """Load and replace the agent's replay buffer from disk if it exists."""
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                self.ddqn_agent.replay_buffer.buffer = pickle.load(f)
-            rl_logger.info(f"Replay buffer loaded from {file_path}")
-        else:
-            rl_logger.info(f"No saved replay buffer found at {file_path}")
+        self.ddqn_agent.replay_buffer.load_from_file(file_path)
 
     def persist_replay_buffer(self):
         """Helper to easily save the replay buffer at a known location."""

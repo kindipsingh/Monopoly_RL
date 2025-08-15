@@ -83,18 +83,22 @@ class ReplayBuffer:
     """
     A simple replay buffer to store transitions for reinforcement learning.
     """
-    def __init__(self, capacity: int = 100000):
+    def __init__(self, capacity: int = 100000, file_path: Optional[str] = None):
         """
         Initialize a replay buffer.
         
         Args:
             capacity (int): Maximum number of transitions to store
+            file_path (Optional[str]): Path to a .pkl file to load the buffer from.
         """
         self.buffer = []
         self.capacity = capacity
         self.position = 0
         self.episode_rewards = []
         self.current_episode_reward = 0.0
+        
+        if file_path:
+            self.load_from_file(file_path)
         
     def add(self, state, action, reward, next_state, done):
         """
@@ -124,7 +128,14 @@ class ReplayBuffer:
         # Add to buffer
         if len(self.buffer) < self.capacity:
             self.buffer.append(None)
-        self.buffer[self.position] = (state, action_idx, reward, next_state, done)
+        
+        # Ensure all components are numpy arrays with consistent shapes
+        state_np = np.asarray(state).reshape(-1)
+        action_np = np.asarray(action_idx)
+        reward_np = np.asarray(reward)
+        next_state_np = np.asarray(next_state).reshape(-1)
+        done_np = np.asarray(done)        
+        self.buffer[self.position] = (state_np, action_np, reward_np, next_state_np, done_np)
         self.position = (self.position + 1) % self.capacity
         
         # Track rewards
@@ -149,7 +160,8 @@ class ReplayBuffer:
         indices = np.random.choice(len(self.buffer), batch_size, replace=False)
         states, actions, rewards, next_states, dones = zip(*[self.buffer[i] for i in indices])
         
-        return np.array(states), np.array(actions), np.array(rewards), np.array(next_states), np.array(dones)
+        # Safely stack the arrays to handle any lingering shape inconsistencies
+        return np.stack(states), np.array(actions), np.array(rewards), np.stack(next_states), np.array(dones, dtype=bool)
     
     def get_stats(self):
         """
@@ -174,7 +186,9 @@ class ReplayBuffer:
             save_summary (bool): Whether to save summary JSON files
             detailed_summary (bool): Whether to include full state vectors in the summary
         """
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        dir_name = os.path.dirname(file_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
         
         # Save the buffer as a pickle file
         with open(file_path, 'wb') as f:
@@ -372,6 +386,12 @@ def calculate_reward(player, current_gameboard):
             player_assets = []
             logger.warning(f"Player {player_name} has assets attribute set to None. Treating as empty list.")
         
+        # If player has lost, no need to calculate rewards
+        if getattr(player, 'status', '') == 'lost':
+            game_state_reward -= 50.0
+            logger.info(f"Player {player_name} LOST! Adding losing penalty of -50 to reward")
+            return game_state_reward
+
         try:
             for asset in player_assets:
                 if hasattr(asset, 'price'):
@@ -392,14 +412,15 @@ def calculate_reward(player, current_gameboard):
         
         # Reward for monopolies (owning all properties of a color group)
         monopoly_reward = 0.0
-        if hasattr(player, 'full_color_sets_possessed'):
-            if player.full_color_sets_possessed is None:
-                logger.warning(f"Player {player_name} has full_color_sets_possessed set to None. Assuming 0 monopolies.")
-            else:
-                try:
-                    monopoly_reward = len(player.full_color_sets_possessed) * 5.0
-                except TypeError:
-                    logger.warning(f"Player {player_name} has full_color_sets_possessed that is not iterable. Assuming 0 monopolies.")
+        player_monopolies = getattr(player, 'full_color_sets_possessed', [])
+        if player_monopolies is None:
+            player_monopolies = []
+            logger.warning(f"Player {player_name} has full_color_sets_possessed set to None. Assuming 0 monopolies.")
+        
+        try:
+            monopoly_reward = len(player_monopolies) * 5.0
+        except TypeError:
+            logger.warning(f"Player {player_name} has full_color_sets_possessed that is not iterable. Assuming 0 monopolies.")
         strategic_reward += monopoly_reward
         
         # Reward for property development (houses and hotels)
