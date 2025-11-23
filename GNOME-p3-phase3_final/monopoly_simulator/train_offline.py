@@ -22,7 +22,7 @@ file_handler = logging.FileHandler(log_file, mode='w')
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 train_logger.addHandler(file_handler)
 
-def train_offline(replay_buffer_path, model_path, num_epochs=100, batch_size=64, learning_rate=1e-4, test_size=0.2, random_state=42):
+def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20000, learning_rate=1e-3, test_size=0.2, random_state=42):
     """
     Trains a DDQN model offline using a saved replay buffer.
 
@@ -42,7 +42,7 @@ def train_offline(replay_buffer_path, model_path, num_epochs=100, batch_size=64,
         train_logger.error(f"Replay buffer not found at {replay_buffer_path}")
         return
 
-    replay_buffer = ReplayBuffer(capacity=10000)  # Capacity doesn't matter here
+    replay_buffer = ReplayBuffer(capacity=30000)  # Capacity doesn't matter here
     replay_buffer.load_from_file(replay_buffer_path)
     train_logger.info(f"Replay buffer loaded with {len(replay_buffer.buffer)} transitions.")
 

@@ -43,8 +43,8 @@ if not logger.handlers:
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-def train_agent(num_games=3, save_interval=1, learning_rate=1e-5, gamma=0.99,
-                batch_size=128, replay_capacity=10000, target_update_freq=500,
+def train_agent(num_games=40, save_interval=1, learning_rate=1e-5, gamma=0.99,
+                batch_size=10000, replay_capacity=30000, target_update_freq=500,
                 epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.99995,
                 state_dim=240, action_dim=2934, model_path=None):
     """
@@ -130,88 +130,32 @@ def train_agent(num_games=3, save_interval=1, learning_rate=1e-5, gamma=0.99,
 
     return ddqn_agent_instance
 
-def evaluate_agent(model_path, num_games=3):
-    """
-    Evaluate a trained DDQN agent by playing games without training.
-    """
-    ddqn_agent_instance = DDQNDecisionAgent(name="DDQN_Evaluator")
-    ddqn_agent_instance.load_model(model_path)
-    ddqn_agent_instance.set_training_mode(False)
-
-    agent_combination_1 = [[background_agent_v3_1, background_agent_v3_1, ddqn_agent_instance, background_agent_v4_1]]
-
-    wins = 0
-    losses = 0
-    draws = 0
-    game_durations = []
-
-    for game_num in tqdm(range(num_games), desc="Evaluation Games"):
-        logger.info(f"Starting evaluation game {game_num+1}/{num_games}")
-        seed = np.random.randint(0, 10000)
-        logger.info(f"Game seed: {seed}")
-
-        start_time = time.time()
-        winner = gameplay.play_game_in_tournament_socket_phase3(
-            game_seed=seed,
-            agent1=agent_combination_1[0][0],
-            agent2=agent_combination_1[0][1],
-            agent3=agent_combination_1[0][2],
-            agent4=agent_combination_1[0][3]
-        )
-        end_time = time.time()
-        duration = end_time - start_time
-        game_durations.append(duration)
-
-        if winner == 'player_3':
-            wins += 1
-        elif winner is None:
-            draws += 1
-        else:
-            losses += 1
-
-        win_rate = wins / (game_num + 1)
-        logger.info(f"Evaluation game {game_num+1} complete in {duration:.1f}s. Winner: {winner}. Win rate: {win_rate:.2f}")
-
-    avg_duration = sum(game_durations) / len(game_durations) if game_durations else 0
-    logger.info("Evaluation completed. Final statistics:")
-    logger.info(f"  Games played: {num_games}")
-    logger.info(f"  Wins: {wins} ({wins/num_games:.2f})")
-    logger.info(f"  Losses: {losses} ({losses/num_games:.2f})")
-    logger.info(f"  Draws: {draws} ({draws/num_games:.2f})")
-    logger.info(f"  Average game duration: {avg_duration:.1f}s")
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train and Evaluate DDQN Agent")
-    parser.add_argument("--mode", type=str, default="train", choices=["train", "evaluate"], help="Execution mode")
-    parser.add_argument("--num_games", type=int, default=1, help="Number of games")
-    parser.add_argument("--eval_games", type=int, default=10, help="Number of games for evaluation")
+    parser = argparse.ArgumentParser(description="Train DDQN Agent")
+    parser.add_argument("--num_games", type=int, default=20, help="Number of games to play for training.")
     parser.add_argument("--save_interval", type=int, default=1, help="Save model interval")
     parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
-    parser.add_argument("--batch_size", type=int, default=128, help="Batch size")
-    parser.add_argument("--replay_capacity", type=int, default=10000, help="Replay buffer capacity")
-    parser.add_argument("--target_update_freq", type=int, default=500, help="Target update frequency")
+    parser.add_argument("--batch_size", type=int, default=8000, help="Batch size")
+    parser.add_argument("--replay_capacity", type=int, default=30000, help="Replay buffer capacity")
+    parser.add_argument("--target_update_freq", type=int, default=100, help="Target update frequency")
     parser.add_argument("--epsilon_start", type=float, default=1.0, help="Starting epsilon")
-    parser.add_argument("--epsilon_end", type=float, default=0.1, help="Minimum epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.99995, help="Epsilon decay rate")
+    parser.add_argument("--epsilon_end", type=float, default=0.0, help="Minimum epsilon")
+    parser.add_argument("--epsilon_decay", type=float, default=0.9998,help="Epsilon decay rate")
     parser.add_argument("--model_path", type=str, default=os.path.join(base_dir, "models", "ddqn_model_final.pth"), help="Path to save/load model")
 
     args = parser.parse_args()
 
-    if args.mode == "train":
-        train_agent(
-            num_games=args.num_games,
-            save_interval=args.save_interval,
-            learning_rate=args.learning_rate,
-            gamma=args.gamma,
-            batch_size=args.batch_size,
-            replay_capacity=args.replay_capacity,
-            target_update_freq=args.target_update_freq,
-            epsilon_start=args.epsilon_start,
-            epsilon_end=args.epsilon_end,
-            epsilon_decay=args.epsilon_decay,
-            model_path=args.model_path
-        )
-        evaluate_agent(args.model_path, num_games=args.eval_games)
-    elif args.mode == "evaluate":
-        evaluate_agent(args.model_path, num_games=args.eval_games)
+    train_agent(
+        num_games=args.num_games,
+        save_interval=args.save_interval,
+        learning_rate=args.learning_rate,
+        gamma=args.gamma,
+        batch_size=args.batch_size,
+        replay_capacity=args.replay_capacity,
+        target_update_freq=args.target_update_freq,
+        epsilon_start=args.epsilon_start,
+        epsilon_end=args.epsilon_end,
+        epsilon_decay=args.epsilon_decay,
+        model_path=args.model_path
+    )

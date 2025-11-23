@@ -8,26 +8,21 @@ mkdir -p ../logs
 mkdir -p ../models
 
 # Default configuration
-MODE="train"                    # Default mode: train; alternatives: evaluate, analyze
-NUM_GAMES=3                  # Number of games for training/evaluation
+NUM_GAMES=20               # Number of games for training
 SAVE_INTERVAL=1                # Save model every SAVE_INTERVAL games
 MODEL_PATH="../models/ddqn_model_final.pth"  # Model file to load/save
 LEARNING_RATE=1e-5           # Learning rate
 GAMMA=0.99                      # Discount factor gamma
-BATCH_SIZE=128                   # Training batch size
-REPLAY_CAPACITY=10000           # Maximum replay buffer capacity (unused when combining files)
-TARGET_UPDATE_FREQ=500            # Update target network every TARGET_UPDATE_FREQ games
+BATCH_SIZE=8000                 # Training batch size
+REPLAY_CAPACITY=30000           # Maximum replay buffer capacity (unused when combining files)
+TARGET_UPDATE_FREQ=100            # Update target network every TARGET_UPDATE_FREQ games
 EPSILON_START=1.0               # Starting epsilon for exploration
-EPSILON_END=0.1                 # Minimum epsilon
-EPSILON_DECAY=0.995             # Epsilon decay rate
+EPSILON_END=0.0                 # Minimum epsilon
+EPSILON_DECAY=0.9998             # Epsilon decay rate
 
 # Parse command line arguments to override defaults if provided
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --mode)
-      MODE="$2"
-      shift 2
-      ;;
     --num_games)
       NUM_GAMES="$2"
       shift 2
@@ -95,36 +90,18 @@ echo "Epsilon end: $EPSILON_END"
 echo "Epsilon decay: $EPSILON_DECAY"
 echo "=================================="
 
-# Run the appropriate mode
-if [ "$MODE" = "train" ]; then
-    echo "Starting DDQN agent training..."
-    python train_ddqn_agent.py \
-        --mode train \
-        --num_games $NUM_GAMES \
-        --save_interval $SAVE_INTERVAL \
-        --learning_rate $LEARNING_RATE \
-        --gamma $GAMMA \
-        --batch_size $BATCH_SIZE \
-        --replay_capacity $REPLAY_CAPACITY \
-        --target_update_freq $TARGET_UPDATE_FREQ \
-        --epsilon_start $EPSILON_START \
-        --epsilon_end $EPSILON_END \
-        --epsilon_decay $EPSILON_DECAY
-elif [ "$MODE" = "evaluate" ]; then
-    echo "Evaluating trained DDQN agent..."
-    python train_ddqn_agent.py \
-        --mode evaluate \
-        --num_games $NUM_GAMES \
-        --model_path $MODEL_PATH
-elif [ "$MODE" = "analyze" ]; then
-    echo "Analyzing replay buffer..."
-    # In this analysis mode, adjust the buffer_path if needed.
-    python train_ddqn_agent.py \
-        --mode analyze \
-        --buffer_path ../monopoly_simulator/replay_buffer.pkl
-else
-    echo "Unknown mode: $MODE"
-    exit 1
-fi
+# Run training
+echo "Starting DDQN agent training..."
+python train_ddqn_agent.py \
+    --num_games $NUM_GAMES \
+    --save_interval $SAVE_INTERVAL \
+    --learning_rate $LEARNING_RATE \
+    --gamma $GAMMA \
+    --batch_size $BATCH_SIZE \
+    --replay_capacity $REPLAY_CAPACITY \
+    --target_update_freq $TARGET_UPDATE_FREQ \
+    --epsilon_start $EPSILON_START \
+    --epsilon_end $EPSILON_END \
+    --epsilon_decay $EPSILON_DECAY
 
 echo "Process complete!"

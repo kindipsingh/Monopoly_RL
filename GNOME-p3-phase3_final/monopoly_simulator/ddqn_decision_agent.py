@@ -25,8 +25,8 @@ import torch.optim as optim
 # -----------------------------
 class DDQNAgent:
     def __init__(self, state_dim=240, action_dim=2934,
-                 lr=1e-5, gamma=0.9999, batch_size=128, 
-                 replay_capacity=10000, target_update_freq=500,
+                 lr=1e-4, gamma=0.9999, batch_size=128, 
+                 replay_capacity=30000, target_update_freq=500,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.99995):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -93,7 +93,7 @@ class DDQNDecisionAgent(Agent):
     """
     def __init__(self, name="DDQN Agent", state_dim=240, action_dim=2934,
                  lr=1e-5, gamma=0.9999, batch_size=128, 
-                 replay_capacity=10000, target_update_freq=500,
+                 replay_capacity=30000, target_update_freq=500,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.99995):
         """
         Initialize the DDQN Decision Agent.
@@ -135,6 +135,7 @@ class DDQNDecisionAgent(Agent):
             epsilon_end=epsilon_end,
             epsilon_decay=epsilon_decay
         )
+        self.ddqn_agent.epsilon = 0.0
         
         self.state_encoder = MonopolyStateEncoder()
         self.action_encoder = ActionEncoder()
@@ -530,7 +531,7 @@ class DDQNDecisionAgent(Agent):
             - parameters: A dictionary of parameters required for the action
         """
         try:
-            rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase} (background agent style)")
+            # rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase} (background agent style)")
             
             # Create state vector and tensor
             state_vector = self.state_encoder.encode_state(current_gameboard)
@@ -596,7 +597,7 @@ class DDQNDecisionAgent(Agent):
             self.last_action_name = action_name
             parameters = mapping.get("parameters", {})
             
-            rl_logger.info(f"Decoded action: {action_name} with parameters: {parameters}")
+            #rl_logger.info(f"Decoded action: {action_name} with parameters: {parameters}")
             
             # Process parameters for special cases
             if "to_player" in parameters and isinstance(parameters["to_player"], str):
@@ -658,103 +659,92 @@ class DDQNDecisionAgent(Agent):
             else:
                 return ("skip_turn", {})
 
+    def _calculate_player_net_worth(self, player):
+        """
+        Calculate the net worth of a player according to the formula in the paper.
+        nwx = cx + Σ pa
+        """
+        net_worth = player.current_cash
+        player_assets = player.assets if player.assets is not None else []
+        
+        for asset in player_assets:
+            # pa = (bp - mv) * b + nh * ph + nH * pH
+            
+            # mv is the mortgage value owed on the property.
+            mv = asset.mortgage if asset.is_mortgaged else 0
+            
+            # b is a bonus constant for monopolies.
+            b = 2.0 if asset.color in player.full_color_sets_possessed else 1.5
+            
+            # bp is the base price of the asset.
+            bp = asset.price
+            
+            pa = (bp - mv) * b
+            
+            # Add value of houses and hotels
+            if hasattr(asset, 'num_houses') and asset.num_houses > 0:
+                pa += asset.num_houses * asset.price_per_house
+            if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
+                # The paper's pH (price of hotel) is ambiguous. We assume its value contribution
+                # is 5x the price of a house, based on the original implementation's logic.
+                pa += asset.num_hotels * (asset.price_per_house * 5)
+            
+            net_worth += pa
+            
+        return net_worth
+
     def _calculate_reward(self, player, current_gameboard):
         """
-        Calculate a comprehensive reward based on the player's current state in the game.
-        This function evaluates multiple aspects of the player's performance:
-        - Net worth (cash + property values)
-        - Property ownership and monopolies
-        - Cash balance
-        - Game state (winning/losing)
-        
-        Parameters:
-            player: A Player instance representing the current player
-            current_gameboard: A dict representing the current game board state
-            
-        Returns:
-            float: The calculated reward value
+        Calculate the reward based on the formula described in the paper.
+        r = ±c for a win/loss, or rx if the game is not over.
+        rx = nwx / Σ nwy for all other active players y.
         """
-        # Base reward: Net worth calculation
-        net_worth = player.current_cash
-        property_value = 0
-        
-        # Calculate property values including houses and hotels
-        player_assets = player.assets if player.assets is not None else []
-        for asset in player_assets:
-            property_value += asset.price
-            if hasattr(asset, 'num_houses'):
-                property_value += asset.num_houses * asset.price_per_house
-            if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
-                property_value += asset.num_hotels * asset.price_per_house * 5
-        
-        # Calculate total net worth
-        total_net_worth = net_worth + property_value
-        
-        # Base reward normalized by a factor to keep it manageable
-        base_reward = total_net_worth / 10000.0
-        
-        # Additional rewards for strategic achievements
-        strategic_reward = 0.0
-        
-        # Reward for monopolies (owning all properties of a color group)
-        monopoly_reward = len(player.full_color_sets_possessed) * 5.0
-        strategic_reward += monopoly_reward
-        
-        # Reward for property development (houses and hotels)
-        development_reward = 0.0
-        for asset in player.assets:
-            if hasattr(asset, 'num_houses') and asset.num_houses > 0:
-                development_reward += asset.num_houses * 0.5
-            if hasattr(asset, 'num_hotels') and asset.num_hotels > 0:
-                development_reward += asset.num_hotels * 3.0
-        strategic_reward += development_reward
-        
-        # Reward for maintaining cash reserves (liquidity)
-        liquidity_reward = 0.0
-        if player.current_cash > 500:
-            liquidity_reward = min(player.current_cash / 5000.0, 5.0)  # Cap at 5.0
-        strategic_reward += liquidity_reward
-        
-        # Penalty for mortgaged properties
-        mortgage_penalty = 0.0
-        for asset in player.assets:
-            if asset.is_mortgaged:
-                mortgage_penalty += 0.5
-        strategic_reward -= mortgage_penalty
-        
-        # Game state rewards/penalties
-        game_state_reward = 0.0
-        
-        # Major reward for winning
-        if 'winner' in current_gameboard and current_gameboard['winner'] == player.player_name:
-            game_state_reward += 10
-            rl_logger.info(f"Player {player.player_name} WON! Adding winning bonus of 100 to reward")
-        
-        # Major penalty for losing
-        if player.status == 'lost':
-            game_state_reward -= 10
-            rl_logger.info(f"Player {player.player_name} LOST! Adding losing penalty of -50 to reward")
-        
-        # Calculate final reward
-        final_reward = base_reward + strategic_reward + game_state_reward
-        
-        if hasattr(self, 'last_action_name') and self.last_action_name in ['skip_turn', 'concluded_actions']:
-            final_reward -= 1
-            rl_logger.info(f"Applied penalty for action: {self.last_action_name}")
+        c = 10.0  # Constant for win/loss reward
 
-        # Log detailed reward breakdown
+        # Check for win/loss state
+        if 'winner' in current_gameboard and current_gameboard['winner'] is not None:
+            if current_gameboard['winner'] == player.player_name:
+                rl_logger.info(f"Player {player.player_name} WON! Reward: {c}")
+                return c
+            else:
+                # Another player won, so this player lost.
+                rl_logger.info(f"Player {player.player_name} LOST! Reward: {-c}")
+                return -c
+        
+        if player.status == 'lost':
+            rl_logger.info(f"Player {player.player_name} LOST! Reward: {-c}")
+            return -c
+
+        # Calculate in-game reward (rx)
+        current_player_net_worth = self._calculate_player_net_worth(player)
+        
+        sum_other_players_net_worth = 0
+        active_players_count = 0
+        for p_obj in current_gameboard['players']:
+            if p_obj.player_name != player.player_name and p_obj.status != 'lost':
+                sum_other_players_net_worth += self._calculate_player_net_worth(p_obj)
+                active_players_count += 1
+
+        if sum_other_players_net_worth == 0:
+            # If sum of other players' net worth is 0, it means the current player is the only one with assets.
+            # This is a winning state, so we provide the win reward.
+            in_game_reward = c if current_player_net_worth > 0 else 0
+        else:
+            in_game_reward = current_player_net_worth / sum_other_players_net_worth
+        
+        final_reward = in_game_reward
+
+        # Apply a small penalty for skipping or concluding actions
+        if hasattr(self, 'last_action_name') and self.last_action_name in ['skip_turn', 'concluded_actions']:
+            final_reward -= 0.01  # Small negative penalty
+            rl_logger.info(f"Applied penalty of 0.01 for action: {self.last_action_name}")
+
+        # Log reward calculation details
         rl_logger.info(f"Reward calculation for {player.player_name}:")
-        rl_logger.info(f"  Cash: ${player.current_cash}")
-        rl_logger.info(f"  Property value: ${property_value}")
-        rl_logger.info(f"  Net worth: ${total_net_worth}")
-        rl_logger.info(f"  Base reward: {base_reward:.2f}")
-        rl_logger.info(f"  Strategic reward: {strategic_reward:.2f}")
-        rl_logger.info(f"    - Monopoly reward: {monopoly_reward:.2f}")
-        rl_logger.info(f"    - Development reward: {development_reward:.2f}")
-        rl_logger.info(f"    - Liquidity reward: {liquidity_reward:.2f}")
-        rl_logger.info(f"    - Mortgage penalty: -{mortgage_penalty:.2f}")
-        rl_logger.info(f"  Game state reward: {game_state_reward:.2f}")
-        rl_logger.info(f"  Final reward: {final_reward:.2f}")
+        rl_logger.info(f"  Net Worth: ${current_player_net_worth:.2f}")
+        rl_logger.info(f"  Sum of Other Players' Net Worth: ${sum_other_players_net_worth:.2f}")
+        rl_logger.info(f"  In-Game Reward (rx): {in_game_reward:.2f}")
+        rl_logger.info(f"  Final Reward: {final_reward:.2f}")
         
         return final_reward
     

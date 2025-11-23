@@ -178,6 +178,11 @@ def optimize_model(agent):
     expected_q_values = reward_batch + (agent.gamma * next_q_values * (~done_batch))
 
     loss = torch.nn.functional.huber_loss(q_values, expected_q_values.unsqueeze(1))
+    
+    optimizer_logger.debug(f"Learning Rate: {agent.optimizer.param_groups[0]['lr']:.6f}")
+    optimizer_logger.info(f"Huber Loss: {loss.item():.4f}")
+    optimizer_logger.debug(f"Q-Values (sample): {q_values.squeeze().tolist()[:4]}")
+    optimizer_logger.debug(f"Expected Q-Values (sample): {expected_q_values.tolist()[:4]}")
 
     agent.optimizer.zero_grad()
     loss.backward()
@@ -188,11 +193,11 @@ def optimize_model(agent):
     if agent.step_count % agent.target_update_freq == 0:
         agent.target_net.load_state_dict(agent.policy_net.state_dict())
 
-    optimizer_logger.debug(f"Batch States (first 2): {states[:2]}")
-    optimizer_logger.debug(f"Batch Actions (first 2): {actions[:2]}")
-    optimizer_logger.debug(f"Batch Rewards (first 2): {rewards[:2]}")
-    optimizer_logger.debug(f"Q-Values (first 2): {q_values[:2].tolist()}")
-    optimizer_logger.debug(f"Expected Q-Values (first 2): {expected_q_values[:2].tolist()}")
+    # optimizer_logger.debug(f"Batch States (first 2): {states[:2]}")
+    # optimizer_logger.debug(f"Batch Actions (first 2): {actions[:2]}")
+    # optimizer_logger.debug(f"Batch Rewards (first 2): {rewards[:2]}")
+    # optimizer_logger.debug(f"Q-Values (first 2): {q_values[:2].tolist()}")
+    # optimizer_logger.debug(f"Expected Q-Values (first 2): {expected_q_values[:2].tolist()}")
     optimizer_logger.info(f"Loss: {loss.item()}")
 
     return loss.item()
@@ -299,7 +304,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     timeout = game_elements['start_time'] + 60 * 60 * 3
 
     # Initialize the action vector logger
-    vector_logger = integrate_with_gameplay(game_elements, history_log_file)
+    # vector_logger = integrate_with_gameplay(game_elements, history_log_file)
     
     # Initialize state encoder for replay buffer
     encoder = MonopolyStateEncoder()
@@ -332,7 +337,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
         pre_roll_code = current_player.make_pre_roll_moves(game_elements)
         
         # After pre-roll moves, log the pre-roll action vector
-        vector_logger.log_pre_roll(current_player, game_elements)
+        # vector_logger.log_pre_roll(current_player, game_elements)
         
         # If this was the RL agent's turn and the last action was a conclude action, record it
         #if current_player.player_name == rl_agent_name and current_state is not None:
@@ -374,7 +379,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             oot_code = out_of_turn_player.make_out_of_turn_moves(game_elements)
             
             # Log the action vector for out-of-turn moves
-            vector_logger.log_out_of_turn(out_of_turn_player, game_elements)
+            # vector_logger.log_out_of_turn(out_of_turn_player, game_elements)
             
             # If this was the RL agent's turn and the last action was a skip action, record it
             #if out_of_turn_player.player_name == rl_agent_name and current_state is not None:
@@ -432,7 +437,7 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
             current_player.make_post_roll_moves(game_elements)
             
             # Log the post-roll action vector after moves
-            vector_logger.log_post_roll(current_player, game_elements)
+            # vector_logger.log_post_roll(current_player, game_elements)
             
             # If this was the RL agent's turn and the last action was a conclude action, record it
             #if current_player.player_name == rl_agent_name and current_state is not None:
@@ -514,9 +519,9 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     logger.debug('Liquid Cash remaining with Bank = ' + str(game_elements['bank'].total_cash_with_bank))
     if workbook:
         read_write_current_state.write_history_to_file(game_elements, workbook)
-    for handler in vector_logger.logger.handlers:
-        handler.close()
-        vector_logger.logger.removeHandler(handler)
+    # for handler in vector_logger.logger.handlers:
+    #     handler.close()
+    #     vector_logger.logger.removeHandler(handler)
 
     # Restore the original _execute_action method
     player.Player._execute_action = original_execute_action
