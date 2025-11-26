@@ -8,17 +8,17 @@ mkdir -p ../logs
 mkdir -p ../models
 
 # Default configuration
-NUM_GAMES=20               # Number of games for training
+NUM_GAMES=30               # Number of games for training
 SAVE_INTERVAL=1                # Save model every SAVE_INTERVAL games
 MODEL_PATH="../models/ddqn_model_final.pth"  # Model file to load/save
 LEARNING_RATE=1e-5           # Learning rate
 GAMMA=0.99                      # Discount factor gamma
 BATCH_SIZE=8000                 # Training batch size
-REPLAY_CAPACITY=30000           # Maximum replay buffer capacity (unused when combining files)
+REPLAY_CAPACITY=100000           # Maximum replay buffer capacity (unused when combining files)
 TARGET_UPDATE_FREQ=100            # Update target network every TARGET_UPDATE_FREQ games
 EPSILON_START=1.0               # Starting epsilon for exploration
 EPSILON_END=0.0                 # Minimum epsilon
-EPSILON_DECAY=0.9998             # Epsilon decay rate
+EPSILON_DECAY=0.90             # Epsilon decay rate
 
 # Parse command line arguments to override defaults if provided
 while [[ $# -gt 0 ]]; do

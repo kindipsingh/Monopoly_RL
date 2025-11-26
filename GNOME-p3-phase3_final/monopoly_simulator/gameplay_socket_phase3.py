@@ -44,17 +44,6 @@ file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(m
 file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
 
-
-optimizer_logger = logging.getLogger('optimizer_logger')
-optimizer_logger.setLevel(logging.DEBUG)
-optimizer_logger.propagate = False
-if not optimizer_logger.handlers:
-    optimizer_file_handler = logging.FileHandler("optimizer.log", mode='w')
-    optimizer_file_handler.setLevel(logging.DEBUG)
-    optimizer_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    optimizer_file_handler.setFormatter(optimizer_formatter)
-    optimizer_logger.addHandler(optimizer_file_handler)
-
 encoded_logger = logging.getLogger("encoded_state")
 encoded_logger.setLevel(logging.DEBUG)
 
@@ -247,32 +236,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
     def execute_action_with_ddqn_and_tracking(self, action_to_execute, parameters, current_gameboard):
         rl_agent_name = 'player_3'
         if self.player_name == rl_agent_name:
-            #Encode state
-            state_encoder = MonopolyStateEncoder()
-            action_encoder = ActionEncoder()
-            state_vector = state_encoder.encode_state(current_gameboard)
-
-            action_idx = self.agent.last_action_idx
-            optimizer_logger.debug(f"Action Index retrieved for DDQN Agent called for {self.agent.last_action_idx}")
-            #Execute the action and get the result
+            
             result = original_execute_action(self, action_to_execute, parameters, current_gameboard)
-
-            # After executing the action, encode the next state
-            next_state_vector = state_encoder.encode_state(current_gameboard)
-
-            #Calculate reward and check if the episode is done
-            reward = self.agent._calculate_reward(self, current_gameboard)
-            done = self.agent._is_episode_done(current_gameboard)
-
-            #Save the action to the replay buffer
-            if game_elements['replay_buffer'] is not None:
-                game_elements['replay_buffer'].add(state_vector.cpu().numpy(), action_idx, reward, next_state_vector.cpu().numpy(), done)
-            #Update the network if in training mode
-            training_mode = self.agent.training_mode
-            if training_mode:
-                loss = optimize_model(self.agent.ddqn_agent)
-                if loss is not None:
-                    optimizer_logger.info(f"DDQN training loss: {loss:.4f}")
 
             return result
         else:
@@ -461,23 +426,27 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                 diagnostics.print_asset_owners(game_elements)
                 diagnostics.print_player_cash_balances(game_elements)
                 
-                # If the RL agent went bankrupt, record this as a terminal state
                 if current_player.player_name == rl_agent_name and current_state is not None:
-                    # Get next state after bankruptcy
                     next_state = encoder.encode_state(game_elements).numpy()[0]
-                    
-                    # Large negative reward for bankruptcy
                     reward = calculate_reward(current_player, game_elements)
-                    
-                    # This is a terminal state
                     done = True
-                    
-                    # Add experience to replay buffer using the proper action index
-                    action_idx = get_action_index(current_player, game_elements)
-                    replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                    logger.debug(f"Added bankruptcy experience to replay buffer for {rl_agent_name}, action index: {action_idx}, reward: {reward:.2f}")
-                    
-                    # Reset current state
+
+                    agent = current_player.agent  # Agent wrapper -> DDQNDecisionAgent inside
+
+                    # If the DDQNDecisionAgent has a pending decision, close that instead
+                    if hasattr(agent, 'pending_valid') and agent.pending_valid and agent.pending_state is not None and agent.pending_action_idx is not None:
+                        s1 = agent.pending_state
+                        a1 = agent.pending_action_idx
+                        replay_buffer.add(s1, a1, reward, next_state, done)
+                        logger.debug(f"Added terminal experience for {rl_agent_name} from pending decision: action_idx={a1}, reward={reward:.2f}")
+                        agent.pending_valid = False
+                        agent.pending_state = None
+                        agent.pending_action_idx = None
+                    else:
+                        action_idx = get_action_index(current_player, game_elements)
+                        replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                        logger.debug("Added terminal experience for {rl_agent_name} from current_state: action_idx={action_idx}, reward={reward:.2f}")
+
                     current_state = None
                     episode_done = True
                 
@@ -489,8 +458,8 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                             game_elements['winner'] = p.player_name
                             
                             # If the RL agent won, record this as a terminal state with high reward
-                            if p.player_name == rl_agent_name and current_state is not None:
-                                # Get next state after winning
+                            if p.player_name == rl_agent_name:
+                                # Encode terminal state
                                 next_state = encoder.encode_state(game_elements).numpy()[0]
                                 
                                 # Calculate reward for winning
@@ -498,13 +467,28 @@ def simulate_game_instance(game_elements, history_log_file=None, np_seed=7, stat
                                 
                                 # This is a terminal state
                                 done = True
-                                
-                                # Add experience to replay buffer using the proper action index
-                                action_idx = get_action_index(p, game_elements)
-                                replay_buffer.add(current_state, action_idx, reward, next_state, done)
-                                logger.debug(f"Added winning experience to replay buffer for {rl_agent_name}, action index: {action_idx}, reward: {reward:.2f}")
-                                
-                                # Reset current state
+
+                                agent = p.agent  # This is the Agent wrapper; inside it, your DDQNDecisionAgent is the underlying implementation
+
+                                # If the DDQNDecisionAgent has a pending decision, close that first
+                                if hasattr(agent, "pending_valid") and agent.pending_valid and agent.pending_state is not None and agent.pending_action_idx is not None:
+                                    s1 = agent.pending_state
+                                    a1 = agent.pending_action_idx
+                                    replay_buffer.add(s1, a1, reward, next_state, done)
+                                    logger.debug(
+                                        f"Added winning experience for {rl_agent_name} from pending decision: action_idx={a1}, reward={reward:.2f}"
+                                    )
+                                    agent.pending_valid = False
+                                    agent.pending_state = None
+                                    agent.pending_action_idx = None
+                                elif current_state is not None:
+                                    # Fallback: no pending decision, use the last known current_state and inferred action
+                                    action_idx = get_action_index(p, game_elements)
+                                    replay_buffer.add(current_state, action_idx, reward, next_state, done)
+                                    logger.debug(
+                                        f"Added winning experience for {rl_agent_name} from current_state: action_idx={action_idx}, reward={reward:.2f}"
+                                    )
+
                                 current_state = None
                                 episode_done = True
             else:

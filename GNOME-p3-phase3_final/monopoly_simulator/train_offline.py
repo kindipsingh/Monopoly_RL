@@ -22,7 +22,7 @@ file_handler = logging.FileHandler(log_file, mode='w')
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 train_logger.addHandler(file_handler)
 
-def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20000, learning_rate=1e-3, test_size=0.2, random_state=42):
+def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20000, learning_rate=1e-5, test_size=0.2, random_state=42):
     """
     Trains a DDQN model offline using a saved replay buffer.
 
@@ -42,7 +42,7 @@ def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20
         train_logger.error(f"Replay buffer not found at {replay_buffer_path}")
         return
 
-    replay_buffer = ReplayBuffer(capacity=30000)  # Capacity doesn't matter here
+    replay_buffer = ReplayBuffer(capacity=100000)  # Capacity doesn't matter here
     replay_buffer.load_from_file(replay_buffer_path)
     train_logger.info(f"Replay buffer loaded with {len(replay_buffer.buffer)} transitions.")
 
@@ -117,18 +117,24 @@ def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20
         print("action_batch[:5]:", action_batch[:5])
   
         # Compute Q(s_t, a)
-        q_values = agent.policy_net(state_batch).gather(1, action_batch)
+        q_values = agent.policy_net(state_batch).gather(1, action_batch).squeeze(1)  # [B]
 
-        # Compute V(s_{t+1}) for all next states.
-        next_q_values = agent.target_net(next_state_batch).max(1)[0].detach()
-        expected_q_values = reward_batch + (agent.gamma * next_q_values * (~done_batch))
+        # Double-DQN target:
+        with torch.no_grad():
+            next_actions = agent.policy_net(next_state_batch).argmax(dim=1, keepdim=True)  # [B,1]
+            next_q_values_target = agent.target_net(next_state_batch).gather(1, next_actions).squeeze(1)  # [B]
+            expected_q_values = reward_batch + (agent.gamma * next_q_values_target * (~done_batch))
+            # Optional: target clipping to avoid catastrophic spikes
+            # expected_q_values = expected_q_values.clamp(min=-100.0, max=100.0)
 
-        # Compute loss
-        loss = F.smooth_l1_loss(q_values, expected_q_values.unsqueeze(1))
+        # Compute loss (Huber / smooth L1)
+        loss = F.smooth_l1_loss(q_values, expected_q_values)
 
         # Optimize the model
         agent.optimizer.zero_grad()
         loss.backward()
+        # Gradient clipping
+        torch.nn.utils.clip_grad_norm_(agent.policy_net.parameters(), 1.0)
         agent.optimizer.step()
 
         train_logger.info(f"Epoch {epoch+1}/{num_epochs}, Training Loss: {loss.item():.4f}")
@@ -163,7 +169,7 @@ def train_offline(replay_buffer_path, model_path, num_epochs=1000, batch_size=20
         val_q_values = agent.policy_net(val_state_batch).gather(1, val_action_batch)
         val_next_q_values = agent.target_net(val_next_state_batch).max(1)[0].detach()
         val_expected_q_values = val_reward_batch + (agent.gamma * val_next_q_values * (~val_done_batch))
-        
+
         val_loss = F.smooth_l1_loss(val_q_values, val_expected_q_values.unsqueeze(1))
         train_logger.info(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {val_loss.item():.4f}")
 

@@ -26,7 +26,7 @@ import torch.optim as optim
 class DDQNAgent:
     def __init__(self, state_dim=240, action_dim=2934,
                  lr=1e-4, gamma=0.9999, batch_size=128, 
-                 replay_capacity=30000, target_update_freq=500,
+                 replay_capacity=100000, target_update_freq=500,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.99995):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -77,9 +77,100 @@ if not rl_logger.handlers:
     rl_logger.addHandler(file_handler)
     rl_logger.addHandler(console_handler)
 ##############################################################
+# Optimizer-specific logger (mirrors gameplay_socket_phase3 behavior)
+optimizer_logger = logging.getLogger('optimizer_logger')
+optimizer_logger.setLevel(logging.DEBUG)
+optimizer_logger.propagate = False
+if not optimizer_logger.handlers:
+    optimizer_file_handler = logging.FileHandler(os.path.join(log_dir, "optimizer.log"), mode='w')
+    optimizer_file_handler.setLevel(logging.DEBUG)
+    optimizer_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    optimizer_file_handler.setFormatter(optimizer_formatter)
+    optimizer_logger.addHandler(optimizer_file_handler)
 
 logger = logging.getLogger('monopoly_simulator.logging_info.ddqn_decision_agent')
 global_ddqn_agent = None
+
+def optimize_model(agent, warmup_threshold: int = 5000, clip_targets: bool = True, target_clip_value: float = 100.0):
+    """
+    Run one Double-DQN optimization step for the given DDQNAgent (agent),
+    using its replay_buffer, policy_net, and target_net.
+
+    Args:
+        agent: DDQNAgent instance (not the decision wrapper).
+        warmup_threshold: Minimum replay size before any optimization.
+        clip_targets: If True, clamp target values to [-target_clip_value, target_clip_value].
+        target_clip_value: Clip limit for target values.
+    """
+    # Warm-up gate
+    buffer_size = len(agent.replay_buffer.buffer)
+    if buffer_size < warmup_threshold:
+        optimizer_logger.debug(
+            f"Skipping optimization: warm-up ({buffer_size} < {warmup_threshold})."
+        )
+        return None
+
+    batch_size = agent.batch_size
+    if buffer_size < batch_size:
+        optimizer_logger.debug(
+            f"Skipping optimization: Replay buffer smaller than batch size ({buffer_size} < {batch_size})."
+        )
+        return None
+
+    # Sample returns 5 arrays: states, actions, rewards, next_states, dones
+    states, actions, rewards, next_states, dones = agent.replay_buffer.sample(batch_size)
+
+    # Convert to tensors on the correct device
+    device = agent.device
+    state_batch      = torch.FloatTensor(states).squeeze(1).to(device)       # [B, state_dim]
+    action_batch     = torch.LongTensor(actions).unsqueeze(1).to(device)     # [B, 1]
+    reward_batch     = torch.FloatTensor(rewards).to(device)                 # [B]
+    next_state_batch = torch.FloatTensor(next_states).squeeze(1).to(device)  # [B, state_dim]
+    done_batch       = torch.BoolTensor(dones).to(device)                    # [B]
+
+    # Safety checks
+    assert state_batch.ndim == 2, f"Expected state_batch to be 2D, got {state_batch.shape}"
+    assert action_batch.ndim == 2 and action_batch.shape[1] == 1, f"Expected action_batch shape [B,1], got {action_batch.shape}"
+    assert state_batch.shape[0] == action_batch.shape[0], "Batch size mismatch"
+
+    # Q(s,a) from policy net for current states
+    q_values_from_net = agent.policy_net(state_batch)                        # [B, action_dim]
+    q_values = q_values_from_net.gather(1, action_batch).squeeze(1)          # [B]
+
+    # Double-DQN target:
+    # 1) select action using policy_net (greedy)
+    # 2) evaluate that action using target_net
+    with torch.no_grad():
+        next_actions = agent.policy_net(next_state_batch).argmax(dim=1, keepdim=True)  # [B,1]
+        next_q_values_target = agent.target_net(next_state_batch).gather(1, next_actions).squeeze(1)  # [B]
+        expected_q_values = reward_batch + (agent.gamma * next_q_values_target * (~done_batch))
+
+        if clip_targets:
+            expected_q_values = expected_q_values.clamp(min=-target_clip_value, max=target_clip_value)
+
+    # Huber loss
+    loss = torch.nn.functional.huber_loss(q_values, expected_q_values)
+
+    # Debug magnitudes
+    optimizer_logger.debug(
+        f"mean|Q|={q_values.abs().mean().item():.4f}, mean|target|={expected_q_values.abs().mean().item():.4f}"
+    )
+
+    agent.optimizer.zero_grad()
+    loss.backward()
+
+    # Gradient clipping (norm)
+    total_norm = torch.nn.utils.clip_grad_norm_(agent.policy_net.parameters(), 1.0)
+    optimizer_logger.debug(f"grad_norm={float(total_norm):.4f}")
+
+    agent.optimizer.step()
+
+    agent.step_count += 1
+    if agent.step_count % agent.target_update_freq == 0:
+        agent.target_net.load_state_dict(agent.policy_net.state_dict())
+
+    optimizer_logger.info(f"Loss: {loss.item():.4f}")
+    return loss.item()
 
 class DDQNDecisionAgent(Agent):
     """
@@ -147,7 +238,9 @@ class DDQNDecisionAgent(Agent):
         self.last_action_mask = None
         self.game_history = []
         self.last_action_name = None
-        
+        self.pending_state = None           # last s₁
+        self.pending_action_idx = None      # last a₁
+        self.pending_valid = False
         self.replay_buffer_size = 0
         self.total_rewards = 0
         self.num_decisions = 0
@@ -531,13 +624,52 @@ class DDQNDecisionAgent(Agent):
             - parameters: A dictionary of parameters required for the action
         """
         try:
-            # rl_logger.debug(f"Making decision for player {player.player_name} in phase {game_phase} (background agent style)")
             
             # Create state vector and tensor
             state_vector = self.state_encoder.encode_state(current_gameboard)
             state_tensor = state_vector.to(self.device)
             
-            # Build the full action mapping
+            # Before computing new action, if there is a pending decision,
+            # finalize a replay transition from (pending_state, pending_action_idx)
+            # to this new decision state (current state_vector).
+            if (
+                hasattr(self, "pending_valid")
+                and self.training_mode
+                and self.pending_valid
+                and self.pending_state is not None
+                and self.pending_action_idx is not None
+            ):
+                try:
+                    # current state_vector is the next decision state s₃ for the previous decision
+                    next_state_np = state_vector.cpu().numpy() if hasattr(state_vector, "cpu") else state_vector.numpy()
+
+                    # Compute reward for this new state; using existing reward function
+                    reward = self._calculate_reward(player, current_gameboard)
+                    done = self._is_episode_done(current_gameboard)
+
+                    # Add transition (s₁, a₁, r(s₃), s₃, done) to the replay buffer
+                    s1 = self.pending_state
+                    a1 = self.pending_action_idx
+                    self.ddqn_agent.replay_buffer.add(s1, a1, reward, next_state_np, done)
+
+                    rl_logger.debug(
+                        f"Added transition from pending decision: action_idx={a1}, reward={reward:.4f}, done={done}"
+                    )
+                    
+                    # Online optimization after adding the transition
+                    if self.training_mode:
+                        loss = optimize_model(self.ddqn_agent, warmup_threshold=5000, clip_targets=True, target_clip_value=100.0)
+                        if loss is not None:
+                            rl_logger.info(f"Online training loss (decision boundary): {loss:.4f}")
+
+                except Exception as e:
+                    rl_logger.error(f"Error finalizing pending decision transition: {e}")
+
+                # Clear pending
+                self.pending_valid = False
+                self.pending_state = None
+                self.pending_action_idx = None
+
             action_encoder = ActionEncoder()
             full_mapping = action_encoder.build_full_action_mapping(player, current_gameboard)
             
@@ -590,7 +722,23 @@ class DDQNDecisionAgent(Agent):
                 player.agent._agent_memory = {}
             player.agent._agent_memory['last_action_idx'] = action_idx
             rl_logger.debug(f"Stored last_action_idx {action_idx} in player agent memory.")
-        
+            
+            # Set new pending decision (s₁, a₁) to be closed at the next decision point
+            try:
+                state_np = state_vector.cpu().numpy() if hasattr(state_vector, "cpu") else state_vector.numpy()
+                # Initialize pending attributes if they don't exist
+                if not hasattr(self, "pending_valid"):
+                    self.pending_valid = False
+                    self.pending_state = None
+                    self.pending_action_idx = None
+                self.pending_state = state_np
+                self.pending_action_idx = action_idx
+                self.pending_valid = True
+                rl_logger.debug(f"Pending decision set: action_idx={action_idx}, phase={game_phase}")
+            except Exception as e:
+                rl_logger.error(f"Error setting pending decision: {e}")
+                self.pending_valid = False
+
             # Decode the selected action
             mapping = action_encoder.decode_action(player, current_gameboard, action_idx)
             action_name = mapping.get("action")

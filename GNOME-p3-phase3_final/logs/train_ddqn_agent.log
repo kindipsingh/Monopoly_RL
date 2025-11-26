@@ -1,0 +1,189 @@
+2025-11-26 00:24:38,773 - train_ddqn_agent - INFO - Loaded model from /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 00:24:38,805 - train_ddqn_agent - INFO - Starting game 1/30
+2025-11-26 00:24:38,806 - train_ddqn_agent - INFO - Game seed: 4279
+2025-11-26 00:25:43,065 - train_ddqn_agent - INFO - Game 1 complete in 64.3s. Winner: player_4. Win rate: 0.00
+2025-11-26 00:25:43,065 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 73200
+2025-11-26 00:25:43,134 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 00:25:45,074 - train_ddqn_agent - INFO - Saved replay buffer after game 1
+2025-11-26 00:25:45,074 - train_ddqn_agent - INFO - Starting game 2/30
+2025-11-26 00:25:45,074 - train_ddqn_agent - INFO - Game seed: 3235
+2025-11-26 00:26:49,942 - train_ddqn_agent - INFO - Game 2 complete in 64.9s. Winner: player_4. Win rate: 0.00
+2025-11-26 00:26:49,942 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 73380
+2025-11-26 00:26:49,979 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 00:26:51,949 - train_ddqn_agent - INFO - Saved replay buffer after game 2
+2025-11-26 00:26:51,950 - train_ddqn_agent - INFO - Starting game 3/30
+2025-11-26 00:26:51,950 - train_ddqn_agent - INFO - Game seed: 5602
+2025-11-26 00:27:37,835 - train_ddqn_agent - INFO - Game 3 complete in 45.9s. Winner: player_1. Win rate: 0.00
+2025-11-26 00:27:37,835 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 73506
+2025-11-26 00:27:37,896 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 00:27:39,887 - train_ddqn_agent - INFO - Saved replay buffer after game 3
+2025-11-26 00:27:39,887 - train_ddqn_agent - INFO - Starting game 4/30
+2025-11-26 00:27:39,887 - train_ddqn_agent - INFO - Game seed: 7266
+2025-11-26 01:14:02,307 - train_ddqn_agent - INFO - Game 4 complete in 2782.4s. Winner: player_3. Win rate: 0.25
+2025-11-26 01:14:02,308 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 81395
+2025-11-26 01:14:02,379 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:14:04,701 - train_ddqn_agent - INFO - Saved replay buffer after game 4
+2025-11-26 01:14:04,703 - train_ddqn_agent - INFO - Starting game 5/30
+2025-11-26 01:14:04,704 - train_ddqn_agent - INFO - Game seed: 9260
+2025-11-26 01:15:07,610 - train_ddqn_agent - INFO - Game 5 complete in 62.9s. Winner: player_4. Win rate: 0.20
+2025-11-26 01:15:07,611 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 81566
+2025-11-26 01:15:07,677 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:15:09,904 - train_ddqn_agent - INFO - Saved replay buffer after game 5
+2025-11-26 01:15:09,904 - train_ddqn_agent - INFO - Starting game 6/30
+2025-11-26 01:15:09,904 - train_ddqn_agent - INFO - Game seed: 6299
+2025-11-26 01:16:57,804 - train_ddqn_agent - INFO - Game 6 complete in 107.9s. Winner: player_2. Win rate: 0.17
+2025-11-26 01:16:57,804 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 81868
+2025-11-26 01:16:57,855 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:16:59,989 - train_ddqn_agent - INFO - Saved replay buffer after game 6
+2025-11-26 01:16:59,990 - train_ddqn_agent - INFO - Starting game 7/30
+2025-11-26 01:16:59,990 - train_ddqn_agent - INFO - Game seed: 4198
+2025-11-26 01:18:14,616 - train_ddqn_agent - INFO - Game 7 complete in 74.6s. Winner: player_2. Win rate: 0.14
+2025-11-26 01:18:14,617 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 82075
+2025-11-26 01:18:14,674 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:18:16,999 - train_ddqn_agent - INFO - Saved replay buffer after game 7
+2025-11-26 01:18:16,999 - train_ddqn_agent - INFO - Starting game 8/30
+2025-11-26 01:18:16,999 - train_ddqn_agent - INFO - Game seed: 1948
+2025-11-26 01:19:21,588 - train_ddqn_agent - INFO - Game 8 complete in 64.6s. Winner: player_1. Win rate: 0.12
+2025-11-26 01:19:21,588 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 82252
+2025-11-26 01:19:21,645 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:19:23,902 - train_ddqn_agent - INFO - Saved replay buffer after game 8
+2025-11-26 01:19:23,902 - train_ddqn_agent - INFO - Starting game 9/30
+2025-11-26 01:19:23,902 - train_ddqn_agent - INFO - Game seed: 3995
+2025-11-26 01:21:25,920 - train_ddqn_agent - INFO - Game 9 complete in 122.0s. Winner: player_2. Win rate: 0.11
+2025-11-26 01:21:25,921 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 82590
+2025-11-26 01:21:25,991 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:21:28,299 - train_ddqn_agent - INFO - Saved replay buffer after game 9
+2025-11-26 01:21:28,300 - train_ddqn_agent - INFO - Starting game 10/30
+2025-11-26 01:21:28,300 - train_ddqn_agent - INFO - Game seed: 418
+2025-11-26 01:22:15,480 - train_ddqn_agent - INFO - Game 10 complete in 47.2s. Winner: player_4. Win rate: 0.10
+2025-11-26 01:22:15,480 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 82718
+2025-11-26 01:22:15,537 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:22:17,770 - train_ddqn_agent - INFO - Saved replay buffer after game 10
+2025-11-26 01:22:17,770 - train_ddqn_agent - INFO - Starting game 11/30
+2025-11-26 01:22:17,770 - train_ddqn_agent - INFO - Game seed: 8082
+2025-11-26 01:23:25,529 - train_ddqn_agent - INFO - Game 11 complete in 67.8s. Winner: player_2. Win rate: 0.09
+2025-11-26 01:23:25,529 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 82904
+2025-11-26 01:23:25,596 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:23:27,920 - train_ddqn_agent - INFO - Saved replay buffer after game 11
+2025-11-26 01:23:27,920 - train_ddqn_agent - INFO - Starting game 12/30
+2025-11-26 01:23:27,920 - train_ddqn_agent - INFO - Game seed: 197
+2025-11-26 01:24:47,697 - train_ddqn_agent - INFO - Game 12 complete in 79.8s. Winner: player_1. Win rate: 0.08
+2025-11-26 01:24:47,697 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 83124
+2025-11-26 01:24:47,773 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:24:50,064 - train_ddqn_agent - INFO - Saved replay buffer after game 12
+2025-11-26 01:24:50,064 - train_ddqn_agent - INFO - Starting game 13/30
+2025-11-26 01:24:50,064 - train_ddqn_agent - INFO - Game seed: 223
+2025-11-26 01:26:05,228 - train_ddqn_agent - INFO - Game 13 complete in 75.2s. Winner: player_2. Win rate: 0.08
+2025-11-26 01:26:05,229 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 83331
+2025-11-26 01:26:05,295 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:26:07,627 - train_ddqn_agent - INFO - Saved replay buffer after game 13
+2025-11-26 01:26:07,627 - train_ddqn_agent - INFO - Starting game 14/30
+2025-11-26 01:26:07,627 - train_ddqn_agent - INFO - Game seed: 1263
+2025-11-26 01:27:30,643 - train_ddqn_agent - INFO - Game 14 complete in 83.0s. Winner: player_1. Win rate: 0.07
+2025-11-26 01:27:30,643 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 83558
+2025-11-26 01:27:30,714 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:27:33,070 - train_ddqn_agent - INFO - Saved replay buffer after game 14
+2025-11-26 01:27:33,071 - train_ddqn_agent - INFO - Starting game 15/30
+2025-11-26 01:27:33,071 - train_ddqn_agent - INFO - Game seed: 1185
+2025-11-26 01:28:57,731 - train_ddqn_agent - INFO - Game 15 complete in 84.7s. Winner: player_2. Win rate: 0.07
+2025-11-26 01:28:57,731 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 83791
+2025-11-26 01:28:57,806 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:29:00,101 - train_ddqn_agent - INFO - Saved replay buffer after game 15
+2025-11-26 01:29:00,101 - train_ddqn_agent - INFO - Starting game 16/30
+2025-11-26 01:29:00,101 - train_ddqn_agent - INFO - Game seed: 6596
+2025-11-26 01:30:59,613 - train_ddqn_agent - INFO - Game 16 complete in 119.5s. Winner: player_1. Win rate: 0.06
+2025-11-26 01:30:59,614 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 84124
+2025-11-26 01:30:59,655 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:31:01,877 - train_ddqn_agent - INFO - Saved replay buffer after game 16
+2025-11-26 01:31:01,878 - train_ddqn_agent - INFO - Starting game 17/30
+2025-11-26 01:31:01,878 - train_ddqn_agent - INFO - Game seed: 6290
+2025-11-26 01:32:53,621 - train_ddqn_agent - INFO - Game 17 complete in 111.7s. Winner: player_4. Win rate: 0.06
+2025-11-26 01:32:53,621 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 84433
+2025-11-26 01:32:53,691 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:32:56,065 - train_ddqn_agent - INFO - Saved replay buffer after game 17
+2025-11-26 01:32:56,066 - train_ddqn_agent - INFO - Starting game 18/30
+2025-11-26 01:32:56,066 - train_ddqn_agent - INFO - Game seed: 9879
+2025-11-26 01:34:38,087 - train_ddqn_agent - INFO - Game 18 complete in 102.0s. Winner: player_4. Win rate: 0.06
+2025-11-26 01:34:38,087 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 84713
+2025-11-26 01:34:38,160 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:34:40,528 - train_ddqn_agent - INFO - Saved replay buffer after game 18
+2025-11-26 01:34:40,528 - train_ddqn_agent - INFO - Starting game 19/30
+2025-11-26 01:34:40,528 - train_ddqn_agent - INFO - Game seed: 8430
+2025-11-26 01:36:24,011 - train_ddqn_agent - INFO - Game 19 complete in 103.5s. Winner: player_4. Win rate: 0.05
+2025-11-26 01:36:24,011 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 84999
+2025-11-26 01:36:24,056 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:36:26,327 - train_ddqn_agent - INFO - Saved replay buffer after game 19
+2025-11-26 01:36:26,328 - train_ddqn_agent - INFO - Starting game 20/30
+2025-11-26 01:36:26,328 - train_ddqn_agent - INFO - Game seed: 3613
+2025-11-26 01:38:00,856 - train_ddqn_agent - INFO - Game 20 complete in 94.5s. Winner: player_1. Win rate: 0.05
+2025-11-26 01:38:00,856 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 85258
+2025-11-26 01:38:00,909 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:38:03,143 - train_ddqn_agent - INFO - Saved replay buffer after game 20
+2025-11-26 01:38:03,143 - train_ddqn_agent - INFO - Starting game 21/30
+2025-11-26 01:38:03,144 - train_ddqn_agent - INFO - Game seed: 1171
+2025-11-26 01:39:33,583 - train_ddqn_agent - INFO - Game 21 complete in 90.4s. Winner: player_1. Win rate: 0.05
+2025-11-26 01:39:33,583 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 85507
+2025-11-26 01:39:33,656 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 01:39:36,111 - train_ddqn_agent - INFO - Saved replay buffer after game 21
+2025-11-26 01:39:36,111 - train_ddqn_agent - INFO - Starting game 22/30
+2025-11-26 01:39:36,111 - train_ddqn_agent - INFO - Game seed: 4547
+2025-11-26 02:52:14,033 - train_ddqn_agent - INFO - Game 22 complete in 4357.9s. Winner: player_3. Win rate: 0.09
+2025-11-26 02:52:14,033 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 97746
+2025-11-26 02:52:14,154 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 02:52:17,065 - train_ddqn_agent - INFO - Saved replay buffer after game 22
+2025-11-26 02:52:17,067 - train_ddqn_agent - INFO - Starting game 23/30
+2025-11-26 02:52:17,067 - train_ddqn_agent - INFO - Game seed: 2640
+2025-11-26 02:53:32,605 - train_ddqn_agent - INFO - Game 23 complete in 75.5s. Winner: player_2. Win rate: 0.09
+2025-11-26 02:53:32,605 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 97947
+2025-11-26 02:53:32,718 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 02:53:35,586 - train_ddqn_agent - INFO - Saved replay buffer after game 23
+2025-11-26 02:53:35,587 - train_ddqn_agent - INFO - Starting game 24/30
+2025-11-26 02:53:35,587 - train_ddqn_agent - INFO - Game seed: 40
+2025-11-26 02:55:18,977 - train_ddqn_agent - INFO - Game 24 complete in 103.4s. Winner: player_4. Win rate: 0.08
+2025-11-26 02:55:18,978 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 98227
+2025-11-26 02:55:19,089 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 02:55:21,949 - train_ddqn_agent - INFO - Saved replay buffer after game 24
+2025-11-26 02:55:21,949 - train_ddqn_agent - INFO - Starting game 25/30
+2025-11-26 02:55:21,949 - train_ddqn_agent - INFO - Game seed: 2063
+2025-11-26 02:56:15,817 - train_ddqn_agent - INFO - Game 25 complete in 53.9s. Winner: player_2. Win rate: 0.08
+2025-11-26 02:56:15,817 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 98365
+2025-11-26 02:56:15,923 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 02:56:18,758 - train_ddqn_agent - INFO - Saved replay buffer after game 25
+2025-11-26 02:56:18,758 - train_ddqn_agent - INFO - Starting game 26/30
+2025-11-26 02:56:18,758 - train_ddqn_agent - INFO - Game seed: 1654
+2025-11-26 02:58:14,902 - train_ddqn_agent - INFO - Game 26 complete in 116.1s. Winner: player_4. Win rate: 0.08
+2025-11-26 02:58:14,902 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 98682
+2025-11-26 02:58:15,001 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 02:58:17,971 - train_ddqn_agent - INFO - Saved replay buffer after game 26
+2025-11-26 02:58:17,972 - train_ddqn_agent - INFO - Starting game 27/30
+2025-11-26 02:58:17,972 - train_ddqn_agent - INFO - Game seed: 4502
+2025-11-26 03:00:18,537 - train_ddqn_agent - INFO - Game 27 complete in 120.6s. Winner: player_4. Win rate: 0.07
+2025-11-26 03:00:18,537 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 99014
+2025-11-26 03:00:18,646 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 03:00:21,658 - train_ddqn_agent - INFO - Saved replay buffer after game 27
+2025-11-26 03:00:21,658 - train_ddqn_agent - INFO - Starting game 28/30
+2025-11-26 03:00:21,659 - train_ddqn_agent - INFO - Game seed: 181
+2025-11-26 03:01:44,816 - train_ddqn_agent - INFO - Game 28 complete in 83.2s. Winner: player_1. Win rate: 0.07
+2025-11-26 03:01:44,817 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 99236
+2025-11-26 03:01:44,883 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 03:01:47,698 - train_ddqn_agent - INFO - Saved replay buffer after game 28
+2025-11-26 03:01:47,699 - train_ddqn_agent - INFO - Starting game 29/30
+2025-11-26 03:01:47,699 - train_ddqn_agent - INFO - Game seed: 2470
+2025-11-26 03:03:29,038 - train_ddqn_agent - INFO - Game 29 complete in 101.3s. Winner: player_2. Win rate: 0.07
+2025-11-26 03:03:29,038 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 99509
+2025-11-26 03:03:29,142 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 03:03:32,036 - train_ddqn_agent - INFO - Saved replay buffer after game 29
+2025-11-26 03:03:32,037 - train_ddqn_agent - INFO - Starting game 30/30
+2025-11-26 03:03:32,037 - train_ddqn_agent - INFO - Game seed: 8125
+2025-11-26 03:05:18,338 - train_ddqn_agent - INFO - Game 30 complete in 106.3s. Winner: player_1. Win rate: 0.07
+2025-11-26 03:05:18,338 - train_ddqn_agent - INFO - Epsilon: 0.0000, Replay buffer size: 99793
+2025-11-26 03:05:18,419 - train_ddqn_agent - INFO - Saved model to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 03:05:21,288 - train_ddqn_agent - INFO - Saved replay buffer after game 30
+2025-11-26 03:05:21,399 - train_ddqn_agent - INFO - Training complete. Final model saved to /Users/guest-user/Downloads/Monopoly_RL/GNOME-p3-phase3_final/models/ddqn_model_final.pth
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO - Training completed. Final statistics:
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO -   Games played: 30
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO -   Wins: 2 (0.07)
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO -   Losses: 28 (0.93)
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO -   Draws: 0 (0.00)
+2025-11-26 03:05:24,095 - train_ddqn_agent - INFO -   Final epsilon: 0.0000
+2025-11-26 03:05:24,096 - train_ddqn_agent - INFO -   Replay buffer size: 99793

@@ -132,16 +132,16 @@ def train_agent(num_games=40, save_interval=1, learning_rate=1e-5, gamma=0.99,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train DDQN Agent")
-    parser.add_argument("--num_games", type=int, default=20, help="Number of games to play for training.")
+    parser.add_argument("--num_games", type=int, default=30, help="Number of games to play for training.")
     parser.add_argument("--save_interval", type=int, default=1, help="Save model interval")
     parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
     parser.add_argument("--batch_size", type=int, default=8000, help="Batch size")
-    parser.add_argument("--replay_capacity", type=int, default=30000, help="Replay buffer capacity")
+    parser.add_argument("--replay_capacity", type=int, default=100000, help="Replay buffer capacity")
     parser.add_argument("--target_update_freq", type=int, default=100, help="Target update frequency")
     parser.add_argument("--epsilon_start", type=float, default=1.0, help="Starting epsilon")
     parser.add_argument("--epsilon_end", type=float, default=0.0, help="Minimum epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.9998,help="Epsilon decay rate")
+    parser.add_argument("--epsilon_decay", type=float, default=0.90,help="Epsilon decay rate")
     parser.add_argument("--model_path", type=str, default=os.path.join(base_dir, "models", "ddqn_model_final.pth"), help="Path to save/load model")
 
     args = parser.parse_args()
